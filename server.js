@@ -48,6 +48,7 @@ function createInitialState() {
     items: [],
     events: [],
     alerts: [],
+    remove_requests: [],
   };
 
   for (let n = 1; n <= 4; n++) {
@@ -319,6 +320,7 @@ async function initMongo() {
     if (!db.items) db.items = [];
     if (!db.events) db.events = [];
     if (!db.alerts) db.alerts = [];
+    if (!db.remove_requests) db.remove_requests = [];
     console.log('✅ Loaded warehouse state from MongoDB Atlas.');
   } else {
     await persistStateNow();
@@ -406,13 +408,23 @@ app.post('/api/events', async (req, res) => {
   }
 
   if (evt.event_type === 'item_removed') {
-    const item = db.items.find(i => i.item_id === evt.item_id);
-    if (item) {
-      item.status = 'removed';
-      item.updated_at = evt.timestamp;
-      item.removed_at = evt.timestamp;
+  const item = db.items.find(i => i.item_id === evt.item_id);
+  if (item) {
+    item.status = 'removed';
+    item.updated_at = evt.timestamp;
+    item.removed_at = evt.timestamp;
+  }
+
+  if (!db.remove_requests) db.remove_requests = [];
+  for (const reqItem of db.remove_requests) {
+    if (reqItem.item_id === evt.item_id && reqItem.status === 'pending') {
+      reqItem.status = 'completed';
+      reqItem.updated_at = evt.timestamp;
+      reqItem.completed_at = evt.timestamp;
+      reqItem.completed_by = 'jetson';
     }
   }
+}
 
   if (evt.event_type === 'inventory_count_warning') {
     const lvl = db.levels.find(l => l.shelf_id === shelf_id && l.level_id === level_id);
@@ -484,27 +496,87 @@ app.get('/api/items/:item_id', (req, res) => {
 app.post('/api/items/:item_id/remove-request', async (req, res) => {
   const item = db.items.find(i => i.item_id === req.params.item_id);
   if (!item) return res.status(404).json({ error: 'Item not found' });
-  if (item.status !== 'placed') return res.status(400).json({ error: `Cannot remove item with status: ${item.status}` });
+  if (item.status !== 'placed') {
+    return res.status(400).json({ error: `Cannot request removal for item with status: ${item.status}` });
+  }
 
-  item.status = 'removed';
-  item.updated_at = new Date().toISOString();
-  item.removed_at = item.updated_at;
+  if (!db.remove_requests) db.remove_requests = [];
+
+  const existingPending = db.remove_requests.find(
+    r => r.item_id === item.item_id && r.status === 'pending'
+  );
+
+  if (existingPending) {
+    return res.json({
+      success: true,
+      message: 'Remove request already pending',
+      request: existingPending,
+      item,
+    });
+  }
+
   const pos = normalizePosition(item.placed_position);
-  const evt = {
-    event_id: uuidv4(),
-    event_type: 'item_removed',
-    timestamp: item.updated_at,
-    shelf_id: pos?.shelf_id || null,
-    level_id: pos?.level_id || null,
+  const now = new Date().toISOString();
+
+  const request = {
+    request_id: uuidv4(),
+    type: 'remove_item',
+    status: 'pending',
     item_id: item.item_id,
-    payload: { requested_by: 'dashboard', note: req.body?.note || '' },
+    shelf_id: pos?.shelf_id || DEFAULT_SHELF_ID,
+    level_id: pos?.level_id || null,
+    requested_at: now,
+    updated_at: now,
+    requested_by: 'dashboard',
+    note: req.body?.note || '',
   };
 
-  recomputeLevels();
+  db.remove_requests.unshift(request);
+
+  const evt = {
+    event_id: uuidv4(),
+    event_type: 'remove_requested',
+    timestamp: now,
+    shelf_id: request.shelf_id,
+    level_id: request.level_id,
+    item_id: item.item_id,
+    payload: {
+      request_id: request.request_id,
+      requested_by: 'dashboard',
+      note: request.note,
+      placed_position: item.placed_position,
+    },
+  };
+
   pushEvent(evt);
   scheduleSave();
+
+  io.emit('remove_request', request);
   io.emit('overview', overviewStats());
-  res.json({ success: true, event: evt, item });
+
+  res.status(202).json({
+    success: true,
+    message: 'Remove request sent to Jetson. Waiting for physical removal confirmation.',
+    request,
+    item,
+    event: evt,
+  });
+});
+
+app.get('/api/remove-requests', (req, res) => {
+  if (!db.remove_requests) db.remove_requests = [];
+
+  const status = req.query.status || null;
+  let requests = [...db.remove_requests];
+
+  if (status) {
+    requests = requests.filter(r => r.status === status);
+  }
+
+  res.json({
+    requests,
+    total: requests.length,
+  });
 });
 
 app.get('/api/shelves/:shelf_id/status', (req, res) => {
