@@ -1,0 +1,57 @@
+menu "Warehouse LED Controller"
+
+    config LED_WIFI_SSID
+        string "WiFi SSID"
+        default "CHANGE_ME_WIFI"
+        help
+            WiFi network name for the ESP32 station.
+
+    config LED_WIFI_PASSWORD
+        string "WiFi Password"
+        default "CHANGE_ME_PASSWORD"
+        help
+            WiFi password. Leave empty only for an open network.
+
+    config LED_MQTT_BROKER_URI
+        string "HiveMQ MQTT broker URI"
+        default "mqtts://CHANGE_ME.s1.eu.hivemq.cloud:8883"
+        help
+            HiveMQ Cloud URI, usually mqtts://<cluster-host>:8883.
+
+    config LED_MQTT_USERNAME
+        string "HiveMQ username"
+        default ""
+
+    config LED_MQTT_PASSWORD
+        string "HiveMQ password"
+        default ""
+
+    config LED_TOPIC
+        string "LED command topic"
+        default "warehouse/SHELF_A/led/command"
+
+    config LED_GPIO_T1
+        int "GPIO for shelf level T1"
+        default 16
+
+    config LED_GPIO_T2
+        int "GPIO for shelf level T2"
+        default 17
+
+    config LED_GPIO_T3
+        int "GPIO for shelf level T3"
+        default 18
+
+    config LED_GPIO_T4
+        int "GPIO for shelf level T4"
+        default 19
+
+    config LED_DEFAULT_BLINK_MS
+        int "Default blink interval in milliseconds"
+        default 500
+
+    config LED_DEFAULT_TIMEOUT_MS
+        int "Default command timeout in milliseconds"
+        default 120000
+
+endmenu

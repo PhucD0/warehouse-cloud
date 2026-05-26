@@ -6,6 +6,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
 const mongoose = require('mongoose');
+const mqtt = require('mqtt');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
 
@@ -26,10 +27,20 @@ const SEED_DEMO_DATA = String(process.env.SEED_DEMO_DATA || 'false').toLowerCase
 const SHELF_W = Number(process.env.SHELF_WIDTH_CM || 12.5);
 const SHELF_H = Number(process.env.SHELF_HEIGHT_PER_LEVEL_CM || 12.5);
 const SHELF_D = Number(process.env.SHELF_DEPTH_CM || 7.5);
+const MQTT_BROKER_URL = process.env.MQTT_BROKER_URL || '';
+const MQTT_USERNAME = process.env.MQTT_USERNAME || '';
+const MQTT_PASSWORD = process.env.MQTT_PASSWORD || '';
+const MQTT_TOPIC_PREFIX = process.env.MQTT_TOPIC_PREFIX || 'warehouse';
+const MQTT_LED_RETAIN = String(process.env.MQTT_LED_RETAIN || 'true').toLowerCase() === 'true';
+const MQTT_LED_QOS = Number(process.env.MQTT_LED_QOS || 1);
+const MQTT_LED_BLINK_MS = Number(process.env.MQTT_LED_BLINK_MS || 500);
+const MQTT_LED_TIMEOUT_MS = Number(process.env.MQTT_LED_TIMEOUT_MS || 120000);
 
 let mongoEnabled = false;
 let StateModel = null;
 let saveTimer = null;
+let mqttClient = null;
+let mqttReady = false;
 
 // One-document state store. This keeps the current dashboard code simple while
 // still persisting all items/events/alerts to MongoDB Atlas when MONGODB_URI is set.
@@ -154,6 +165,94 @@ function normalizePosition(pos) {
     start_cm: pos.start_cm !== undefined ? Number(pos.start_cm) : undefined,
     end_cm: pos.end_cm !== undefined ? Number(pos.end_cm) : undefined,
   };
+}
+
+function ledTopicForShelf(shelfId) {
+  return `${MQTT_TOPIC_PREFIX}/${normalizeShelfId(shelfId)}/led/command`;
+}
+
+function initMqttBridge() {
+  if (!MQTT_BROKER_URL) {
+    console.log('MQTT LED bridge disabled. Set MQTT_BROKER_URL to enable HiveMQ publishing.');
+    return;
+  }
+
+  mqttClient = mqtt.connect(MQTT_BROKER_URL, {
+    clientId: process.env.MQTT_CLIENT_ID || `warehouse-cloud-${uuidv4().slice(0, 8)}`,
+    clean: true,
+    reconnectPeriod: Number(process.env.MQTT_RECONNECT_MS || 5000),
+    connectTimeout: Number(process.env.MQTT_CONNECT_TIMEOUT_MS || 30000),
+    username: MQTT_USERNAME || undefined,
+    password: MQTT_PASSWORD || undefined,
+  });
+
+  mqttClient.on('connect', () => {
+    mqttReady = true;
+    console.log(`MQTT LED bridge connected: ${MQTT_BROKER_URL}`);
+  });
+
+  mqttClient.on('offline', () => {
+    mqttReady = false;
+    console.warn('MQTT LED bridge offline.');
+  });
+
+  mqttClient.on('close', () => {
+    mqttReady = false;
+  });
+
+  mqttClient.on('error', err => {
+    mqttReady = false;
+    console.error('MQTT LED bridge error:', err.message);
+  });
+}
+
+function publishLedCommand(command) {
+  if (!MQTT_BROKER_URL || !mqttClient) return;
+  const topic = ledTopicForShelf(command.shelf_id);
+  const payload = JSON.stringify(command);
+
+  mqttClient.publish(
+    topic,
+    payload,
+    { qos: MQTT_LED_QOS, retain: MQTT_LED_RETAIN },
+    err => {
+      if (err) {
+        console.error(`MQTT LED publish failed on ${topic}:`, err.message);
+        return;
+      }
+      console.log(`MQTT LED ${command.command} -> ${topic}: ${payload}`);
+    }
+  );
+}
+
+function publishPlacementBlink(item, evt) {
+  const pos = normalizePosition(
+    item?.suggested_position ||
+    evt?.payload?.suggested_position ||
+    evt?.suggested_position
+  );
+  if (!pos?.level_id) return;
+
+  publishLedCommand({
+    command: 'blink',
+    shelf_id: pos.shelf_id,
+    level_id: pos.level_id,
+    item_id: item?.item_id || evt?.item_id || null,
+    blink_ms: MQTT_LED_BLINK_MS,
+    timeout_ms: MQTT_LED_TIMEOUT_MS,
+    source: 'warehouse-cloud',
+  });
+}
+
+function publishPlacementClear(itemId, position, reason = 'item_placed') {
+  const pos = normalizePosition(position || { shelf_id: DEFAULT_SHELF_ID });
+  publishLedCommand({
+    command: 'clear',
+    shelf_id: pos?.shelf_id || DEFAULT_SHELF_ID,
+    item_id: itemId || null,
+    reason,
+    source: 'warehouse-cloud',
+  });
 }
 
 function ensureShelfAndLevel(shelfId, levelId) {
@@ -335,6 +434,7 @@ app.get('/api/health', (req, res) => {
     ok: true,
     service: 'warehouse-cloud',
     storage: mongoEnabled ? 'mongodb_atlas' : 'in_memory',
+    mqtt_led_bridge: MQTT_BROKER_URL ? (mqttReady ? 'connected' : 'configured') : 'disabled',
     time: new Date().toISOString(),
   });
 });
@@ -375,7 +475,18 @@ app.post('/api/events', async (req, res) => {
       item.updated_at = evt.timestamp;
     }
     evt.item_id = itemId;
+
+    const suggested = normalizePosition(payload.suggested_position || req.body.suggested_position || item.suggested_position);
+    if (suggested?.level_id) {
+      ensureShelfAndLevel(suggested.shelf_id, suggested.level_id);
+      item.suggested_position = suggested;
+      evt.shelf_id = suggested.shelf_id;
+      evt.level_id = suggested.level_id;
+      if (!evt.payload.suggested_position) evt.payload.suggested_position = suggested;
+    }
+
     pushEvent(evt);
+    publishPlacementBlink(item, evt);
     scheduleSave();
     io.emit('overview', overviewStats());
     return res.status(201).json({ event: evt, item, storage: mongoEnabled ? 'mongodb_atlas' : 'in_memory' });
@@ -405,6 +516,7 @@ app.post('/api/events', async (req, res) => {
     }
     evt.item_id = itemId;
     if (!evt.payload.position && position) evt.payload.position = position;
+    publishPlacementClear(itemId, position || item.suggested_position, 'item_placed');
   }
 
   if (evt.event_type === 'item_removed') {
@@ -628,6 +740,8 @@ async function start() {
     process.exit(1);
   }
 
+  initMqttBridge();
+
   httpServer.listen(PORT, '0.0.0.0', () => {
     console.log(`\n🚀 Warehouse Cloud running on port ${PORT}`);
     console.log(`   Local:  http://localhost:${PORT}`);
@@ -638,6 +752,7 @@ async function start() {
 
 process.on('SIGTERM', async () => {
   try { await persistStateNow(); } catch (_) {}
+  try { if (mqttClient) mqttClient.end(true); } catch (_) {}
   process.exit(0);
 });
 

@@ -343,3 +343,55 @@ requests.post(f"{CLOUD_URL}/api/events", json=event, timeout=5)
 ```
 
 Chỉ gửi metadata/event. Không gửi video thô.
+
+---
+
+## 10. ESP32 LED indicator qua HiveMQ
+
+Luong dieu khien den:
+
+```text
+Jetson item_created + suggested_position
+  -> Warehouse Cloud /api/events
+  -> HiveMQ topic warehouse/SHELF_A/led/command
+  -> ESP32 blink LED theo tang T1-T4
+```
+
+Cloud bridge dung cac bien moi truong sau:
+
+```env
+MQTT_BROKER_URL=mqtts://<hivemq-host>:8883
+MQTT_USERNAME=<hivemq_username>
+MQTT_PASSWORD=<hivemq_password>
+MQTT_TOPIC_PREFIX=warehouse
+MQTT_LED_RETAIN=true
+MQTT_LED_QOS=1
+MQTT_LED_BLINK_MS=500
+MQTT_LED_TIMEOUT_MS=120000
+```
+
+Neu `MQTT_BROKER_URL` khong duoc set, backend van chay binh thuong va chi tat MQTT LED bridge.
+
+ESP32 firmware nam trong:
+
+```text
+esp32-led-controller/
+```
+
+Build nhanh:
+
+```powershell
+cd C:\Users\jach9\Downloads\IOT-DoAn\warehouse-cloud\esp32-led-controller
+idf.py set-target esp32
+idf.py menuconfig
+idf.py build
+idf.py -p COM_PORT flash monitor
+```
+
+Trong `menuconfig`, vao `Warehouse LED Controller` va dien WiFi/HiveMQ credential. `sdkconfig` bi ignore vi co secret; cau hinh an toan mac dinh nam trong `sdkconfig.defaults`.
+
+Mac dinh LED 5mm active-high:
+
+```text
+T1=GPIO16, T2=GPIO17, T3=GPIO18, T4=GPIO19
+```
