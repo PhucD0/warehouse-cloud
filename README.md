@@ -395,3 +395,14 @@ Mac dinh LED 5mm active-high:
 ```text
 T1=GPIO16, T2=GPIO17, T3=GPIO18, T4=GPIO19
 ```
+
+Arduino IDE sketch tuong duong nam trong:
+
+```text
+esp32-led-controller-arduino/warehouse_led_controller_arduino/
+```
+
+Mo file `warehouse_led_controller_arduino.ino`, copy
+`arduino_secrets.h.example` thanh `arduino_secrets.h`, dien WiFi/HiveMQ, chon
+board `NodeMCU-32S` hoac `ESP32 Dev Module`, roi upload. Ban Arduino nay khong
+dung `sdkconfig`; cac gia tri tuong duong duoc khai bao truc tiep trong sketch.
