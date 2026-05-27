@@ -210,6 +210,27 @@ function normalizePosition(pos) {
   };
 }
 
+// Auto-assign x_offset_cm if it's 0 or missing, so items don't overlap
+function autoComputeXOffset(pos, excludeItemId) {
+  if (pos && pos.shelf_id && pos.level_id && !pos.x_offset_cm) {
+    const lvlItems = db.items.filter(i => 
+      i.item_id !== excludeItemId &&
+      (i.status === 'placed' || i.status === 'waiting_for_placement')
+    );
+    let maxX = 0;
+    for (const existing of lvlItems) {
+      const exPos = existing.placed_position || existing.suggested_position;
+      if (exPos && exPos.shelf_id === pos.shelf_id && exPos.level_id === pos.level_id) {
+        const exW = existing.size_cm?.w || 3;
+        const rightEdge = (exPos.x_offset_cm || 0) + exW;
+        if (rightEdge > maxX) maxX = rightEdge;
+      }
+    }
+    if (maxX > 0) pos.x_offset_cm = maxX + 0.5; // 0.5cm gap
+  }
+  return pos;
+}
+
 function ledTopicForShelf(shelfId) {
   return `${MQTT_TOPIC_PREFIX}/${normalizeShelfId(shelfId)}/led/command`;
 }
@@ -529,6 +550,7 @@ app.post('/api/events', async (req, res) => {
     const suggested = normalizePosition(payload.suggested_position || req.body.suggested_position || item.suggested_position);
     if (suggested?.level_id) {
       ensureShelfAndLevel(suggested.shelf_id, suggested.level_id);
+      autoComputeXOffset(suggested, itemId);
       item.suggested_position = suggested;
       evt.shelf_id = suggested.shelf_id;
       evt.level_id = suggested.level_id;
@@ -544,7 +566,7 @@ app.post('/api/events', async (req, res) => {
 
   if (evt.event_type === 'item_placed') {
     const itemId = evt.item_id || `ITEM_${uuidv4().slice(0, 8).toUpperCase()}`;
-    const position = extractPosition({ ...input, shelf_id, level_id });
+    const position = autoComputeXOffset(extractPosition({ ...input, shelf_id, level_id }), itemId);
     let item = db.items.find(i => i.item_id === itemId);
     if (!item) {
       item = makeItem({
@@ -559,7 +581,7 @@ app.post('/api/events', async (req, res) => {
     } else {
       item.status = 'placed';
       item.size_cm = normalizeSize(payload.size_cm || payload.item_size_cm || item.size_cm);
-      item.placed_position = position || normalizePosition({ shelf_id, level_id });
+      item.placed_position = position || autoComputeXOffset(normalizePosition({ shelf_id, level_id }), itemId);
       item.suggested_position = normalizePosition(payload.suggested_position || item.suggested_position);
       item.updated_at = evt.timestamp;
       item.removed_at = null;

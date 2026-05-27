@@ -874,7 +874,8 @@ function renderWarehouseMap(d, waitingItems) {
 function renderShelfDetailGrid(d, waitingItems) {
   const shelfHtml = (d.shelves || []).map(sh => {
     if (!sh) return '';
-    const levels = (sh.levels || []).slice().reverse();
+    // Sort levels T1 at top to match 3D model
+    const levels = (sh.levels || []).slice().sort((a,b) => Number(a.level_num||0) - Number(b.level_num||0));
     return `<div class="shelf-box">
       <div class="shelf-head">
         <div>
@@ -962,7 +963,7 @@ function renderShelfDetail3D(shelf, waitingItems) {
 
   // Scale: pixels per cm — larger for readability
   const pxPerCm = 20;
-  const totalW = Math.max(capacityCm * pxPerCm, 420);
+  const totalW = capacityCm * pxPerCm;
   const levelH = 130; // px per level
 
   let colorIdx = 0;
