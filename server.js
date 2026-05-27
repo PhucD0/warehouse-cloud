@@ -44,17 +44,52 @@ let mqttReady = false;
 
 // One-document state store. This keeps the current dashboard code simple while
 // still persisting all items/events/alerts to MongoDB Atlas when MONGODB_URI is set.
+// ── Shelf definitions (source of truth for warehouse layout) ──────────────────
+const SHELF_DEFS = [
+  { shelf_id: DEFAULT_SHELF_ID, label: 'Kệ A' },
+  { shelf_id: 'SHELF_B',        label: 'Kệ B' },
+  { shelf_id: 'SHELF_C',        label: 'Kệ C' },
+  { shelf_id: 'SHELF_D',        label: 'Kệ D' },
+];
+
+// Merge any missing shelves/levels into existing state (e.g. after MongoDB load)
+function ensureDefaultShelves(state = db) {
+  let changed = false;
+  for (const def of SHELF_DEFS) {
+    // Add shelf if missing
+    if (!state.shelves.find(s => s.shelf_id === def.shelf_id)) {
+      state.shelves.push({
+        shelf_id: def.shelf_id,
+        label: def.label,
+        physical_size_cm: { w: SHELF_W, h: SHELF_H * 4, d: SHELF_D },
+      });
+      console.log(`✚ Added missing shelf: ${def.shelf_id} (${def.label})`);
+      changed = true;
+    }
+    // Add levels T1–T4 for this shelf if missing
+    for (let n = 1; n <= 4; n++) {
+      if (!state.levels.find(l => l.shelf_id === def.shelf_id && l.level_id === `T${n}`)) {
+        state.levels.push({
+          level_id: `T${n}`,
+          shelf_id: def.shelf_id,
+          level_num: n,
+          expected_count: 0,
+          detected_count: 0,
+          capacity_cm: SHELF_W,
+          used_cm: 0,
+          status: 'ok',
+        });
+        console.log(`  ✚ Added missing level T${n} for ${def.shelf_id}`);
+        changed = true;
+      }
+    }
+  }
+  return changed;
+}
+
 let db = createInitialState();
 
 function createInitialState() {
-  // Define all shelves in the warehouse
-  const SHELF_DEFS = [
-    { shelf_id: DEFAULT_SHELF_ID, label: 'Kệ A' },
-    { shelf_id: 'SHELF_B',        label: 'Kệ B' },
-    { shelf_id: 'SHELF_C',        label: 'Kệ C' },
-    { shelf_id: 'SHELF_D',        label: 'Kệ D' },
-  ];
-
   const state = {
     shelves: SHELF_DEFS.map(s => ({
       shelf_id: s.shelf_id,
@@ -428,7 +463,14 @@ async function initMongo() {
     if (!db.events) db.events = [];
     if (!db.alerts) db.alerts = [];
     if (!db.remove_requests) db.remove_requests = [];
-    console.log('✅ Loaded warehouse state from MongoDB Atlas.');
+    // Merge any new shelves/levels defined in SHELF_DEFS but missing from DB
+    const changed = ensureDefaultShelves(db);
+    if (changed) {
+      await persistStateNow();
+      console.log('✅ Merged new shelves into existing MongoDB state.');
+    } else {
+      console.log('✅ Loaded warehouse state from MongoDB Atlas.');
+    }
   } else {
     await persistStateNow();
     console.log('✅ Created initial warehouse state in MongoDB Atlas.');
