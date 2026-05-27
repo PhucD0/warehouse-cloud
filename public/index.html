@@ -832,6 +832,14 @@ function renderOverview() {
   const d = overviewData;
   if (!d) { document.getElementById('content').innerHTML = '<div class="empty-state">Đang tải...</div>'; return; }
 
+  const overviewOutboundCount = (d.shelves || []).reduce((sum, sh) => {
+    if (!sh) return sum;
+    return sum + (sh.levels || []).reduce((levelSum, lv) => {
+      const outItems = (lv.items || []).filter(it => Boolean(getPendingRemoveRequestForItem(it.item_id)));
+      return levelSum + outItems.length;
+    }, 0);
+  }, 0);
+
   const shelfHtml = (d.shelves || []).map(sh => {
     if (!sh) return '';
     const levels = (sh.levels || []).slice().reverse();
@@ -908,9 +916,9 @@ function renderOverview() {
     <div class="sec-head mb-16">
       <span class="sec-title">Trạng thái kệ hàng — Expected vs Detected</span>
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
-        <span style="display:flex;align-items:center;gap:5px;font-size:10px;font-family:var(--mono);color:#ef4444">
-          <span style="width:12px;height:12px;border:2px solid #ef4444;border-radius:2px;background:rgba(239,68,68,.08);display:inline-block"></span>Outbound pending
-        </span>
+        ${overviewOutboundCount ? `<span style="display:flex;align-items:center;gap:5px;font-size:10px;font-family:var(--mono);color:#ef4444">
+          <span style="width:12px;height:12px;border:2px solid #ef4444;border-radius:2px;background:rgba(239,68,68,.08);display:inline-block"></span>Outbound pending (${overviewOutboundCount})
+        </span>` : ''}
         <button class="btn btn-ghost btn-sm" onclick="nav('shelves')">Xem chi tiết →</button>
       </div>
     </div>
