@@ -956,18 +956,18 @@ const ITEM_COLORS = [
 ];
 
 function renderShelfDetail3D(shelf, waitingItems) {
-  // Sort levels top→bottom for display (T4 at top, T1 at bottom)
-  const levels = [...(shelf.levels || [])].sort((a,b) => Number(b.level_num||0) - Number(a.level_num||0));
+  // Sort levels: T1 at top (first), T4 at bottom
+  const levels = [...(shelf.levels || [])].sort((a,b) => Number(a.level_num||0) - Number(b.level_num||0));
   const capacityCm = shelf.physical_size_cm?.w || 60;
 
-  // Scale: pixels per cm
-  const pxPerCm = 7;
-  const totalW = Math.max(capacityCm * pxPerCm, 380);
-  const levelH = 80; // px per level
+  // Scale: pixels per cm — larger for readability
+  const pxPerCm = 20;
+  const totalW = Math.max(capacityCm * pxPerCm, 420);
+  const levelH = 130; // px per level
 
   let colorIdx = 0;
 
-  const levelsHtml = levels.map(lv => {
+  const levelsHtml = levels.map((lv, idx) => {
     const placedItems = (lv.items || []);
     const suggForLevel = waitingItems.filter(i => i.suggested_position?.level_id === lv.level_id);
 
@@ -978,33 +978,33 @@ function renderShelfDetail3D(shelf, waitingItems) {
       const xOff = Number(pos.x_offset_cm || 0);
       const wCm  = Number(it.size_cm?.w || 3);
       const hCm  = Number(it.size_cm?.h || 5);
-      const xPx  = xOff * pxPerCm;
-      const wPx  = Math.max(wCm * pxPerCm, 18);
-      const hPx  = Math.min(hCm * pxPerCm, levelH - 6);
+      const xPx  = Math.round(xOff * pxPerCm);
+      const wPx  = Math.round(wCm  * pxPerCm);          // exact proportional width
+      const hPx  = Math.min(Math.round(hCm * pxPerCm), levelH - 10);
       const col  = ITEM_COLORS[colorIdx % ITEM_COLORS.length];
       colorIdx++;
       const shortId = it.item_id.slice(-6);
       itemBoxes += `<div class="shelf-item-box"
         style="left:${xPx}px;width:${wPx}px;height:${hPx}px;
-               background:${col.bg};border:1.5px solid ${col.border};color:${col.text}"
-        onclick="openDetail('${it.item_id}')" title="${it.item_id} (${it.size_cm?.w}×${it.size_cm?.h}×${it.size_cm?.d} cm)">
+               background:${col.bg};border:2px solid ${col.border};color:${col.text}"
+        onclick="openDetail('${it.item_id}')" title="${it.item_id} — ${it.size_cm?.w}×${it.size_cm?.h}×${it.size_cm?.d} cm · x=${xOff}cm">
         <span class="item-label">${shortId}</span>
       </div>`;
     }
 
-    // Suggested placements — place after existing items
+    // Suggested placements — kích thước đúng theo size_cm thật
     for (let i = 0; i < suggForLevel.length; i++) {
       const it = suggForLevel[i];
       const pos = it.suggested_position || {};
       const xOff = Number(pos.x_offset_cm || 0);
       const wCm  = Number(it.size_cm?.w || 3);
       const hCm  = Number(it.size_cm?.h || 5);
-      const xPx  = xOff * pxPerCm;
-      const wPx  = Math.max(wCm * pxPerCm, 22);
-      const hPx  = Math.min(hCm * pxPerCm, levelH - 6);
+      const xPx  = Math.round(xOff * pxPerCm);
+      const wPx  = Math.round(wCm  * pxPerCm);          // exact proportional width
+      const hPx  = Math.min(Math.round(hCm * pxPerCm), levelH - 10);
       itemBoxes += `<div class="shelf-item-suggested"
         style="left:${xPx}px;width:${wPx}px;height:${hPx}px"
-        title="Vị trí gợi ý: ${it.item_id} (${it.size_cm?.w}×${it.size_cm?.h}×${it.size_cm?.d} cm) — chờ xếp">
+        title="Gợi ý: ${it.item_id} — ${it.size_cm?.w}×${it.size_cm?.h}×${it.size_cm?.d} cm · x=${xOff}cm">
         <span class="suggested-icon">📦</span>
         <span class="suggested-label">${it.item_id.slice(-4)}</span>
       </div>`;
@@ -1012,9 +1012,11 @@ function renderShelfDetail3D(shelf, waitingItems) {
 
     const pct = Math.round(((lv.used_cm||0) / (lv.capacity_cm||1)) * 100);
     const warn = lv.expected_count !== lv.detected_count;
+    const isTop = idx === 0;
     return `<div class="shelf-level-row">
       <div class="shelf-level-label">
         <span style="font-weight:600;color:${suggForLevel.length?'#ef4444':'var(--text2)'}">T${lv.level_num}</span>
+        ${isTop ? `<span style="font-size:7px;color:var(--accent);font-weight:600">TRÊN</span>` : ''}
         <span style="font-size:8px">${pct}%</span>
         ${warn?`<span style="color:var(--warn);font-size:8px">⚠</span>`:''}
       </div>
@@ -1029,7 +1031,7 @@ function renderShelfDetail3D(shelf, waitingItems) {
     <div class="shelf-3d">
       <div class="shelf-3d-header">
         <span>← ${capacityCm} cm →</span>
-        <span>${levels.length} tầng · T${levels[levels.length-1]?.level_num||1} (thấp nhất) → T${levels[0]?.level_num||4} (cao nhất)</span>
+        <span>${levels.length} tầng · T${levels[0]?.level_num||1} (trên cùng) → T${levels[levels.length-1]?.level_num||4} (thấp nhất)</span>
       </div>
       <div style="overflow-x:auto">
         ${levelsHtml}
