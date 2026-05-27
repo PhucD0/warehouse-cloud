@@ -193,6 +193,12 @@ tr:hover td{background:rgba(0,0,0,.025)}
 .floor-block:last-child{border-bottom:none}
 .floor-block:hover{background:var(--bg3)}
 .floor-block.warn{border-left:2px solid var(--warn)}
+.floor-block.outbound{border-left:3px solid #ef4444;background:rgba(239,68,68,.045)}
+.floor-block.outbound:hover{background:rgba(239,68,68,.075)}
+.floor-block.outbound .capacity-bar{box-shadow:0 0 0 1px rgba(239,68,68,.18)}
+.overview-outbound-row{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}
+.overview-outbound-chip{font-size:8px;font-family:var(--mono);padding:2px 5px;border-radius:3px;color:#ef4444;background:rgba(239,68,68,.09);border:1px solid rgba(239,68,68,.35);cursor:pointer}
+.overview-outbound-chip:hover{border-color:#ef4444;background:rgba(239,68,68,.14)}
 .floor-row-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
 .floor-label{font-size:11px;font-family:var(--mono);color:var(--text2)}
 .floor-counts{font-size:10px;font-family:var(--mono);color:var(--text3)}
@@ -478,30 +484,26 @@ tr:hover td{background:rgba(0,0,0,.025)}
 
 /* ── QR Search / Outbound highlight ── */
 .map-shelf.outbound{
-  border-color:#ef4444;
-  background:rgba(239,68,68,.12);
-  animation:outbound-pulse 1.25s ease-in-out infinite;
+  border-color:#f59e0b;
+  background:rgba(245,158,11,.13);
+  animation:shelf-pulse 1.3s ease-in-out infinite;
 }
-.map-shelf.outbound .map-shelf-label{color:#ef4444}
-.outbound-badge{background:#ef4444!important;color:#fff!important}
-.item-chip.outbound{border-color:#ef4444;color:#ef4444;background:rgba(239,68,68,.09);box-shadow:0 0 0 1px rgba(239,68,68,.16) inset}
+.map-shelf.outbound .map-shelf-label{color:#d97706}
+.outbound-badge{background:#f59e0b!important;color:#111!important}
+.item-chip.outbound{border-color:#f59e0b;color:#d97706;background:rgba(245,158,11,.1)}
 .shelf-item-box.outbound{
-  background:rgba(239,68,68,.10)!important;
-  border:2px solid #ef4444!important;
-  color:#ef4444!important;
-  box-shadow:0 0 0 3px rgba(239,68,68,.18), 0 0 0 6px rgba(239,68,68,.08);
-  animation:outbound-pulse 1.25s ease-in-out infinite;
+  background:rgba(245,158,11,.20)!important;
+  border:2px solid #f59e0b!important;
+  color:#d97706!important;
+  box-shadow:0 0 0 3px rgba(245,158,11,.16);
+  animation:shelf-pulse 1.35s ease-in-out infinite;
   z-index:5;
 }
 .outbound-marker{
   position:absolute;top:3px;left:3px;right:3px;
-  background:#ef4444;color:#fff;
+  background:#f59e0b;color:#111;
   font-size:7px;font-family:var(--mono);font-weight:700;
   border-radius:2px;padding:1px 2px;text-align:center;
-}
-@keyframes outbound-pulse{
-  0%,100%{box-shadow:0 0 0 3px rgba(239,68,68,.18),0 0 0 6px rgba(239,68,68,.08)}
-  50%{box-shadow:0 0 0 3px rgba(239,68,68,.30),0 0 0 10px rgba(239,68,68,.10)}
 }
 .qr-search-grid{display:grid;grid-template-columns:minmax(280px,420px) 1fr;gap:16px;align-items:start}
 @media(max-width:900px){.qr-search-grid{grid-template-columns:1fr}}
@@ -726,7 +728,7 @@ function nav(page, extra) {
 async function loadPage() {
   const c = document.getElementById('content');
   switch (currentPage) {
-    case 'overview': await fetchOverview(); renderOverview(); break;
+    case 'overview': await fetchOverview(); await fetchItems(); await fetchRemoveRequests(); renderOverview(); break;
     case 'shelves':  await fetchOverview(); await fetchItems(); await fetchRemoveRequests(); renderShelves(); break;
     case 'items':    await fetchItems(); await fetchRemoveRequests(); renderItems(); break;
     case 'qrsearch': await fetchItems(); await fetchRemoveRequests(); renderQrSearch(); break;
@@ -833,25 +835,37 @@ function renderOverview() {
   const shelfHtml = (d.shelves || []).map(sh => {
     if (!sh) return '';
     const levels = (sh.levels || []).slice().reverse();
-    return `<div class="shelf-box">
+    const shelfOutboundCount = levels.reduce((sum, lv) => {
+      const outItems = (lv.items || []).filter(it => Boolean(getPendingRemoveRequestForItem(it.item_id)));
+      return sum + outItems.length;
+    }, 0);
+
+    return `<div class="shelf-box${shelfOutboundCount ? ' outbound' : ''}">
       <div class="shelf-head">
         <span class="shelf-name">${sh.label || sh.shelf_id}</span>
-        <span style="font-size:10px;color:var(--text3);font-family:var(--mono)">${sh.shelf_id}</span>
+        <div style="display:flex;gap:6px;align-items:center">
+          ${shelfOutboundCount ? `<span class="badge missing">${shelfOutboundCount} OUTBOUND</span>` : ''}
+          <span style="font-size:10px;color:var(--text3);font-family:var(--mono)">${sh.shelf_id}</span>
+        </div>
       </div>
       ${levels.map(lv => {
         const pct = Math.round((lv.used_cm / lv.capacity_cm) * 100);
         const warn = lv.expected_count !== lv.detected_count;
         const fillClass = pct >= 90 ? 'fill-full' : pct >= 65 ? 'fill-warn' : 'fill-ok';
-        return `<div class="floor-block${warn?' warn':''}">
+        const items = lv.items || [];
+        const outboundItems = items.filter(it => Boolean(getPendingRemoveRequestForItem(it.item_id)));
+        return `<div class="floor-block${warn?' warn':''}${outboundItems.length?' outbound':''}">
           <div class="floor-row-top">
             <span class="floor-label">T${lv.level_num}</span>
-            <div style="display:flex;gap:6px;align-items:center">
+            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
+              ${outboundItems.length ? `<span class="badge missing">OUT ${outboundItems.length}</span>` : ''}
               ${warn ? `<span class="badge warning">⚠ mismatch</span>` : ''}
               <span class="floor-counts">${lv.detected_count}/${lv.expected_count}</span>
             </div>
           </div>
-          <div class="capacity-bar"><div class="capacity-fill ${fillClass}" style="width:${pct}%"></div></div>
-          <div style="font-size:9px;color:var(--text3);font-family:var(--mono)">${lv.used_cm}/${lv.capacity_cm}cm · ${lv.items?.length||0} items</div>
+          <div class="capacity-bar"><div class="capacity-fill ${outboundItems.length ? 'fill-full' : fillClass}" style="width:${pct}%"></div></div>
+          <div style="font-size:9px;color:var(--text3);font-family:var(--mono)">${lv.used_cm}/${lv.capacity_cm}cm · ${items.length} items</div>
+          ${outboundItems.length ? `<div class="overview-outbound-row">${outboundItems.map(it => `<span class="overview-outbound-chip" onclick="openDetail('${it.item_id}')">${it.item_id.slice(-6)} OUT</span>`).join('')}</div>` : ''}
         </div>`;
       }).join('')}
     </div>`;
@@ -893,7 +907,12 @@ function renderOverview() {
 
     <div class="sec-head mb-16">
       <span class="sec-title">Trạng thái kệ hàng — Expected vs Detected</span>
-      <button class="btn btn-ghost btn-sm" onclick="nav('shelves')">Xem chi tiết →</button>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <span style="display:flex;align-items:center;gap:5px;font-size:10px;font-family:var(--mono);color:#ef4444">
+          <span style="width:12px;height:12px;border:2px solid #ef4444;border-radius:2px;background:rgba(239,68,68,.08);display:inline-block"></span>Outbound pending
+        </span>
+        <button class="btn btn-ghost btn-sm" onclick="nav('shelves')">Xem chi tiết →</button>
+      </div>
     </div>
     <div class="shelf-grid mb-24">${shelfHtml}</div>
 
@@ -924,12 +943,9 @@ function renderShelves() {
   document.getElementById('content').innerHTML = `
     <div class="sec-head mb-16">
       <span class="sec-title">Sơ đồ kho — ${(d.shelves||[]).length} kệ · ${overviewData.placed||0} items đang trên kệ · ${waitingItems.length} chờ xếp</span>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <div style="display:flex;gap:8px;align-items:center">
         <span style="display:flex;align-items:center;gap:5px;font-size:10px;font-family:var(--mono);color:#ef4444">
           <span style="width:12px;height:12px;border:2px dashed #ef4444;border-radius:2px;display:inline-block"></span>Kệ gợi ý
-        </span>
-        <span style="display:flex;align-items:center;gap:5px;font-size:10px;font-family:var(--mono);color:#ef4444">
-          <span style="width:12px;height:12px;border:2px solid #ef4444;border-radius:2px;background:rgba(239,68,68,.09);display:inline-block"></span>Outbound pending
         </span>
         <span style="display:flex;align-items:center;gap:5px;font-size:10px;font-family:var(--mono);color:var(--success)">
           <span style="width:12px;height:12px;border:2px dashed #2d7a4f;border-radius:2px;background:rgba(16,185,129,.1);display:inline-block"></span>Kệ bình thường
@@ -1075,10 +1091,9 @@ async function openShelfModal(shelfId) {
   body.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text3)">Đang tải...</div>';
   overlay.classList.add('open');
 
-  // Ensure fresh data, including QR/outbound remove requests
+  // Ensure fresh data
   await fetchOverview();
-  await fetchItems();
-  await fetchRemoveRequests();
+  if (allItems.length === 0) await fetchItems();
 
   const d = overviewData;
   const shelf = (d?.shelves || []).find(s => s?.shelf_id === shelfId);
@@ -1089,10 +1104,8 @@ async function openShelfModal(shelfId) {
     i.suggested_position?.shelf_id === shelfId
   );
 
-  const outboundCount = (allRemoveRequests || []).filter(r => r.status === 'pending' && r.shelf_id === shelfId).length;
-
   title.textContent = `Mô phỏng kệ: ${shelf.label || shelf.shelf_id}`;
-  sub.textContent = `${shelf.shelf_id} · ${shelf.physical_size_cm?.w}×${shelf.physical_size_cm?.h}×${shelf.physical_size_cm?.d} cm · ${waitingItems.length} vật đang chờ gợi ý · ${outboundCount} outbound pending`;
+  sub.textContent = `${shelf.shelf_id} · ${shelf.physical_size_cm?.w}×${shelf.physical_size_cm?.h}×${shelf.physical_size_cm?.d} cm · ${waitingItems.length} vật đang chờ gợi ý`;
 
   body.innerHTML = renderShelfDetail3D(shelf, waitingItems);
 }
@@ -1145,7 +1158,7 @@ function renderShelfDetail3D(shelf, waitingItems) {
       const pendingReq = getPendingRemoveRequestForItem(it.item_id);
       const boxClass = pendingReq ? 'shelf-item-box outbound' : 'shelf-item-box';
       const boxStyle = pendingReq
-        ? 'background:rgba(239,68,68,.10);border:2px solid #ef4444;color:#ef4444'
+        ? 'background:rgba(245,158,11,.20);border:2px solid #f59e0b;color:#d97706'
         : `background:${col.bg};border:2px solid ${col.border};color:${col.text}`;
       itemBoxes += `<div class="${boxClass}"
         style="left:${xPct}%;width:${wPct}%;height:${hPx}px;${boxStyle}"
@@ -1208,10 +1221,6 @@ function renderShelfDetail3D(shelf, waitingItems) {
       <div class="legend-item">
         <div class="legend-dashed"></div>
         <span>Vị trí gợi ý (chờ xếp kệ)</span>
-      </div>
-      <div class="legend-item">
-        <div class="legend-box" style="background:rgba(239,68,68,.09);border:2px solid #ef4444"></div>
-        <span>Outbound pending — Jetson đang highlight vùng REMOVE</span>
       </div>
       <div class="legend-item">
         <div class="legend-box" style="background:var(--bg4);border:1px solid var(--border)"></div>
