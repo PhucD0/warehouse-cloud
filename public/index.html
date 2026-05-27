@@ -898,11 +898,10 @@ function renderShelfDetailGrid(d, waitingItems) {
             <span style="font-size:10px;font-family:var(--mono);color:${warn?'var(--warn)':'var(--text3)'}">
               ${lv.detected_count}/${lv.expected_count}
             </span>
-          </div>
           <div class="capacity-bar"><div class="capacity-fill ${fillClass}" style="width:${pct}%"></div></div>
           <div style="font-size:9px;color:var(--text3);font-family:var(--mono);margin-bottom:6px">${lv.used_cm}/${lv.capacity_cm} cm (${pct}%)</div>
           <div class="item-chips">
-            ${items.map(it=>`<span class="item-chip" onclick="openDetail('${it.item_id}')">${it.item_id}</span>`).join('')}
+            ${items.map(it=>`<span class="item-chip" onclick="openDetail('${it.item_id}')">${it.item_id.slice(-4)}</span>`).join('')}
             ${items.length===0?`<span style="font-size:9px;color:var(--text3);font-style:italic">trống</span>`:''}
           </div>
         </div>`;
