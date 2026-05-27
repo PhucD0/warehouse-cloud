@@ -179,6 +179,7 @@ tr:hover td{background:rgba(0,0,0,.025)}
 .badge.unknown    {background:rgba(139,90,246,.1);color:#8b5cf6;border:1px solid rgba(139,90,246,.2)}
 .badge.ok         {background:rgba(16,185,129,.1);color:#10b981;border:1px solid rgba(16,185,129,.2)}
 .badge.warning    {background:rgba(245,158,11,.1);color:#f59e0b;border:1px solid rgba(245,158,11,.25)}
+.badge.outbound_pending{background:rgba(245,158,11,.12);color:#d97706;border:1px solid rgba(245,158,11,.30)}
 
 /* ── Shelf visual ── */
 .shelf-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
@@ -753,7 +754,42 @@ function upsertRemoveRequest(req) {
 }
 
 function getPendingRemoveRequestForItem(itemId) {
-  return (allRemoveRequests || []).find(r => r.item_id === itemId && r.status === 'pending') || null;
+  const request = (allRemoveRequests || []).find(r => r.item_id === itemId && r.status === 'pending');
+  if (request) return request;
+
+  // Backend may also decorate the item itself with outbound metadata.
+  const item = (allItems || []).find(i => i.item_id === itemId);
+  if (item?.pending_remove_request) return item.pending_remove_request;
+  if (item?.outbound_request) return item.outbound_request;
+  if (item?.outbound_status === 'pending') {
+    return {
+      request_id: item.outbound_request_id || 'pending',
+      item_id: item.item_id,
+      status: 'pending',
+      source: item.outbound_source || 'unknown',
+    };
+  }
+  return null;
+}
+
+function upsertItem(item) {
+  if (!item || !item.item_id) return;
+  const idx = allItems.findIndex(i => i.item_id === item.item_id);
+  if (idx >= 0) allItems[idx] = item;
+  else allItems.unshift(item);
+}
+
+function effectiveStatusForItem(item) {
+  return getPendingRemoveRequestForItem(item?.item_id) ? 'outbound_pending' : (item?.ui_status || item?.display_status || item?.status || 'unknown');
+}
+
+function statusBadgeClass(status) {
+  return {
+    placed:'placed', removed:'removed',
+    waiting_for_placement:'waiting',
+    missing_suspected:'missing', unknown_object:'unknown',
+    outbound_pending:'outbound_pending'
+  }[status] || 'unknown';
 }
 
 function normalizeQrClient(value) {
@@ -1190,7 +1226,10 @@ function renderItems() {
   const search = document.getElementById('sq') ? document.getElementById('sq').value.toLowerCase() : '';
 
   let items = allItems;
-  if (statusFilter) items = items.filter(i => i.status === statusFilter);
+  if (statusFilter) {
+    if (statusFilter === 'outbound_pending') items = items.filter(i => Boolean(getPendingRemoveRequestForItem(i.item_id)) || i.outbound_status === 'pending');
+    else items = items.filter(i => i.status === statusFilter);
+  }
   if (search) items = items.filter(i =>
     i.item_id.toLowerCase().includes(search) ||
     (i.placed_position?.shelf_id||'').toLowerCase().includes(search) ||
@@ -1199,17 +1238,14 @@ function renderItems() {
 
   const rows = items.map(it => {
     const pos = it.placed_position || it.suggested_position;
-    const statusLabel = {
-      placed:'placed', removed:'removed',
-      waiting_for_placement:'waiting',
-      missing_suspected:'missing', unknown_object:'unknown'
-    }[it.status] || 'unknown';
     const pendingReq = getPendingRemoveRequestForItem(it.item_id);
+    const effectiveStatus = pendingReq ? 'outbound_pending' : (it.ui_status || it.display_status || it.status);
+    const statusLabel = statusBadgeClass(effectiveStatus);
     return `<tr>
       <td><span class="mono" style="cursor:pointer;color:var(--accent2)" onclick="openDetail('${it.item_id}')">${it.item_id}</span></td>
       <td><span class="mono" style="font-size:10px">${it.qr_data}</span></td>
       <td><span class="mono">${it.size_cm?.w}×${it.size_cm?.h}×${it.size_cm?.d} cm</span></td>
-      <td><span class="badge ${statusLabel}">${it.status}</span></td>
+      <td><span class="badge ${statusLabel}">${effectiveStatus}</span></td>
       <td><span class="mono">${pos?.shelf_id||'—'}</span></td>
       <td><span class="mono">${pos?.level_id||'—'}</span></td>
       <td><span class="mono" style="font-size:10px">${pos?.x_offset_cm!=null?pos.x_offset_cm+'cm':'—'}</span></td>
@@ -1230,6 +1266,7 @@ function renderItems() {
       <select id="sf" onchange="renderItems()">
         <option value="">Tất cả trạng thái</option>
         <option value="placed">placed</option>
+        <option value="outbound_pending">outbound_pending</option>
         <option value="waiting_for_placement">waiting_for_placement</option>
         <option value="removed">removed</option>
         <option value="missing_suspected">missing_suspected</option>
@@ -1337,7 +1374,10 @@ async function renderDetail(itemId) {
     const { item, events } = await r.json();
 
     const pos = item.placed_position || item.suggested_position;
-    const statusLabel = { placed:'placed', removed:'removed', waiting_for_placement:'waiting', missing_suspected:'missing', unknown_object:'unknown' }[item.status] || 'unknown';
+    upsertItem(item);
+    const pendingReq = getPendingRemoveRequestForItem(item.item_id);
+    const effectiveStatus = pendingReq ? 'outbound_pending' : (item.ui_status || item.display_status || item.status);
+    const statusLabel = statusBadgeClass(effectiveStatus);
 
     const qrVisual = item.status === 'placed'
       ? `<img src="${API}/api/items/${encodeURIComponent(item.item_id)}/qr.svg" alt="QR ${item.item_id}" style="width:120px;height:120px;background:white;border-radius:4px" onerror="this.replaceWith(document.createTextNode('QR chưa sẵn sàng'))"/>`
@@ -1359,9 +1399,9 @@ async function renderDetail(itemId) {
     c.innerHTML = `
       <div style="margin-bottom:16px;display:flex;gap:8px;align-items:center">
         <button class="btn btn-ghost btn-sm" onclick="nav('items')">← Quay lại</button>
-        <span class="badge ${statusLabel}">${item.status}</span>
+        <span class="badge ${statusLabel}">${effectiveStatus}</span>
         ${item.status==='placed'?`<button class="btn btn-ghost btn-sm" onclick="downloadItemQr('${item.item_id}')">Tải QR</button>`:''}
-        ${item.status==='placed' ? (getPendingRemoveRequestForItem(item.item_id) ? `<span class="badge warning">Đang chờ Jetson outbound</span>` : `<button class="btn btn-danger btn-sm" onclick="removeItem('${item.item_id}')">Xuất kho</button>`) : ''}
+        ${item.status==='placed' ? (pendingReq ? `<span class="badge warning">Đang chờ Jetson outbound</span>` : `<button class="btn btn-danger btn-sm" onclick="removeItem('${item.item_id}')">Xuất kho</button>`) : ''}
       </div>
       <div class="detail-grid">
         <div>
@@ -1387,7 +1427,8 @@ async function renderDetail(itemId) {
             <div class="kv-list">
               <div class="kv"><span class="kv-k">Item ID</span><span class="kv-v mono">${item.item_id}</span></div>
               <div class="kv"><span class="kv-k">QR Data</span><span class="kv-v mono">${item.qr_data}</span></div>
-              <div class="kv"><span class="kv-k">Status</span><span class="kv-v"><span class="badge ${statusLabel}">${item.status}</span></span></div>
+              <div class="kv"><span class="kv-k">Status</span><span class="kv-v"><span class="badge ${statusLabel}">${effectiveStatus}</span></span></div>
+              ${pendingReq ? `<div class="kv"><span class="kv-k">Outbound request</span><span class="kv-v mono">${pendingReq.request_id}<br/>status=${pendingReq.status}</span></div>` : ''}
               <div class="kv"><span class="kv-k">Suggested position</span><span class="kv-v mono">${item.suggested_position?`${item.suggested_position.shelf_id} · ${item.suggested_position.level_id} · x=${item.suggested_position.x_offset_cm}cm`:'—'}</span></div>
               <div class="kv"><span class="kv-k">Placed position</span><span class="kv-v mono">${item.placed_position?`${item.placed_position.shelf_id} · ${item.placed_position.level_id} · x=${item.placed_position.x_offset_cm}cm`:'—'}</span></div>
               <div class="kv"><span class="kv-k">Created at</span><span class="kv-v mono">${fmtDate(item.created_at)}</span></div>
@@ -1458,14 +1499,18 @@ function renderQrUploadPreview() {
 function renderQrResult(data) {
   if (!data || !data.item) return '<div class="empty-state">Chưa có kết quả.</div>';
   const item = data.item;
+  upsertItem(item);
+  if (data.request) upsertRemoveRequest(data.request);
   const pos = data.position || item.placed_position || item.suggested_position || {};
   const pending = data.request || data.pending_request || getPendingRemoveRequestForItem(item.item_id);
+  const effectiveStatus = pending ? 'outbound_pending' : (item.ui_status || item.display_status || item.status);
+  const statusLabel = statusBadgeClass(effectiveStatus);
   return `
     <div class="qr-result-card">
       <div class="qr-result-title">Kết quả tìm hàng</div>
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
         <span class="mono" style="color:var(--accent2);font-size:13px;cursor:pointer" onclick="openDetail('${item.item_id}')">${item.item_id}</span>
-        <span class="badge placed">${item.status}</span>
+        <span class="badge ${statusLabel}">${effectiveStatus}</span>
         ${pending ? '<span class="badge warning">outbound pending</span>' : ''}
       </div>
       <div class="kv-list">
@@ -1633,6 +1678,8 @@ async function lookupQrItem() {
     const d = await r.json();
     if (!r.ok) { qrLookupResult = null; document.getElementById('qr-result').innerHTML = `<div class="empty-state">${escapeHtml(d.error || 'Không tìm thấy item')}</div>`; return; }
     qrLookupResult = d;
+    if (d.pending_request) upsertRemoveRequest(d.pending_request);
+    if (d.item) upsertItem(d.item);
     document.getElementById('qr-result').innerHTML = renderQrResult(d);
     toast(`✓ Tìm thấy ${d.item.item_id}`, 'success');
   } catch(e) {
@@ -1653,6 +1700,8 @@ async function requestOutboundByQr() {
     const d = await r.json();
     if (!r.ok) { toast(`Lỗi: ${d.error}`, 'danger'); return; }
     qrLookupResult = d;
+    if (d.request) upsertRemoveRequest(d.request);
+    if (d.item) upsertItem(d.item);
     await fetchRemoveRequests();
     document.getElementById('qr-result').innerHTML = renderQrResult(d);
     toast(`✓ Đã gửi outbound request cho ${d.item.item_id}. Chờ Jetson highlight.`, 'success');
@@ -1703,8 +1752,12 @@ async function removeItem(itemId) {
   try {
     const r = await fetch(`${API}/api/items/${itemId}/remove-request`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ note: 'Dashboard export' }) });
     if (r.ok) {
+      const d = await r.json();
+      if (d.request) upsertRemoveRequest(d.request);
+      if (d.item) upsertItem(d.item);
       toast(`✓ Đã gửi yêu cầu xuất kho ${itemId}. Chờ Jetson xác nhận.`, 'success');
       await fetchItems();
+      await fetchRemoveRequests();
       if (currentPage === 'items') renderItems();
       if (currentPage === 'detail') await renderDetail(itemId);
     } else {

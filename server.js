@@ -50,6 +50,7 @@ let StateModel = null;
 let saveTimer = null;
 let mqttClient = null;
 let mqttReady = false;
+let stateDirty = false;
 
 // One-document state store. This keeps the current dashboard code simple while
 // still persisting all items/events/alerts to MongoDB Atlas when MONGODB_URI is set.
@@ -489,6 +490,21 @@ function getPendingRemoveRequest(itemId) {
   ) || null;
 }
 
+
+function decorateItemForClient(item) {
+  if (!item) return item;
+  const pending = getPendingRemoveRequest(item.item_id);
+  return {
+    ...item,
+    ui_status: pending ? 'outbound_pending' : item.status,
+    display_status: pending ? 'outbound_pending' : item.status,
+    outbound_status: pending ? 'pending' : (item.outbound_status || null),
+    outbound_request_id: pending ? pending.request_id : (item.outbound_request_id || null),
+    outbound_request: pending || null,
+    pending_remove_request: pending || null,
+  };
+}
+
 function createPendingRemoveRequestForItem(item, options = {}) {
   if (!item) {
     const err = new Error('Item not found');
@@ -506,6 +522,10 @@ function createPendingRemoveRequestForItem(item, options = {}) {
 
   const existingPending = getPendingRemoveRequest(item.item_id);
   if (existingPending) {
+    item.outbound_status = 'pending';
+    item.outbound_request_id = existingPending.request_id;
+    item.outbound_requested_at = existingPending.requested_at || item.outbound_requested_at || new Date().toISOString();
+    item.outbound_source = existingPending.source || item.outbound_source || 'dashboard_export';
     return {
       alreadyPending: true,
       request: existingPending,
@@ -537,6 +557,14 @@ function createPendingRemoveRequestForItem(item, options = {}) {
   };
 
   db.remove_requests.unshift(request);
+
+  // Keep item.status as placed until Jetson confirms item_removed,
+  // but expose outbound_status so the dashboard can show it is being processed.
+  item.outbound_status = 'pending';
+  item.outbound_request_id = request.request_id;
+  item.outbound_requested_at = now;
+  item.outbound_source = source;
+  item.updated_at = now;
 
   const evt = {
     event_id: uuidv4(),
@@ -599,9 +627,11 @@ async function persistStateNow() {
       console.error('Local JSON save failed:', err.message);
     }
   }
+  stateDirty = false;
 }
 
 function scheduleSave() {
+  stateDirty = true;
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
     persistStateNow().catch(err => console.error('Save failed:', err.message));
@@ -661,6 +691,9 @@ async function initMongo() {
 }
 
 async function syncFromDB() {
+  // Avoid overwriting fresh in-memory changes (e.g. QR outbound request)
+  // before the debounced MongoDB save finishes.
+  if (stateDirty) return;
   if (!mongoEnabled || !StateModel) return;
   try {
     const saved = await StateModel.findOne({ key: 'warehouse' }).lean();
@@ -760,6 +793,10 @@ app.post('/api/events', async (req, res) => {
       item.suggested_position = normalizePosition(payload.suggested_position || item.suggested_position);
       item.updated_at = evt.timestamp;
       item.removed_at = null;
+      delete item.outbound_status;
+      delete item.outbound_request_id;
+      delete item.outbound_requested_at;
+      delete item.outbound_source;
     }
     evt.item_id = itemId;
     if (!evt.payload.position && position) evt.payload.position = position;
@@ -772,6 +809,10 @@ app.post('/api/events', async (req, res) => {
     item.status = 'removed';
     item.updated_at = evt.timestamp;
     item.removed_at = evt.timestamp;
+    delete item.outbound_status;
+    delete item.outbound_request_id;
+    delete item.outbound_requested_at;
+    delete item.outbound_source;
   }
 
   if (!db.remove_requests) db.remove_requests = [];
@@ -839,18 +880,25 @@ app.get('/api/items', async (req, res) => {
   await syncFromDB();
   const { status, shelf_id } = req.query;
   let items = [...db.items];
-  if (status) items = items.filter(i => i.status === status);
+  if (status) {
+    if (status === 'outbound_pending') {
+      items = items.filter(i => Boolean(getPendingRemoveRequest(i.item_id)) || i.outbound_status === 'pending');
+    } else {
+      items = items.filter(i => i.status === status);
+    }
+  }
   if (shelf_id) {
     const sid = normalizeShelfId(shelf_id);
     items = items.filter(i => normalizePosition(i.placed_position)?.shelf_id === sid || normalizePosition(i.suggested_position)?.shelf_id === sid);
   }
-  res.json({ items, total: items.length });
+  const decorated = items.map(decorateItemForClient);
+  res.json({ items: decorated, total: decorated.length });
 });
 
 app.get('/api/items/:item_id', (req, res) => {
   const item = db.items.find(i => i.item_id === req.params.item_id);
   if (!item) return res.status(404).json({ error: 'Item not found' });
-  res.json({ item, events: getItemHistory(item.item_id) });
+  res.json({ item: decorateItemForClient(item), events: getItemHistory(item.item_id) });
 });
 
 function findItemByIdParam(itemId) {
@@ -955,7 +1003,7 @@ app.post('/api/items/:item_id/remove-request', async (req, res) => {
       success: true,
       message: result.message,
       request: result.request,
-      item: result.item,
+      item: decorateItemForClient(result.item),
       event: result.event,
     });
   } catch (err) {
@@ -993,7 +1041,7 @@ app.post('/api/qr/lookup', async (req, res) => {
   res.json({
     success: true,
     normalized,
-    item: anyItem,
+    item: decorateItemForClient(anyItem),
     position: normalizePosition(anyItem.placed_position || anyItem.suggested_position),
     pending_request: getPendingRemoveRequest(anyItem.item_id),
   });
@@ -1027,7 +1075,7 @@ app.post('/api/qr/outbound-request', async (req, res) => {
       success: true,
       message: result.message,
       normalized,
-      item: result.item,
+      item: decorateItemForClient(result.item),
       position: normalizePosition(result.item.placed_position || result.item.suggested_position),
       request: result.request,
       event: result.event,
