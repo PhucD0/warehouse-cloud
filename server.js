@@ -400,6 +400,7 @@ function overviewStats() {
     waiting: db.items.filter(i => i.status === 'waiting_for_placement').length,
     missing_suspected: db.items.filter(i => i.status === 'missing_suspected').length,
     active_warnings: db.alerts.length,
+    pending_remove_requests: (db.remove_requests || []).filter(r => r.status === 'pending').length,
     shelves: db.shelves.map(s => shelfStatus(s.shelf_id)),
     storage: mongoEnabled ? 'mongodb_atlas' : 'in_memory',
   };
@@ -431,6 +432,130 @@ function getItemHistory(item_id) {
   return db.events
     .filter(e => e.item_id === item_id)
     .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+}
+
+
+function normalizeQrLookupText(value) {
+  let text = String(value || '').trim();
+  try { text = decodeURIComponent(text); } catch (_) {}
+
+  // Accept raw item_id, WH:ITEM_ID, quoted values, or a pasted URL that contains the QR value.
+  text = text.replace(/^['"]|['"]$/g, '').trim();
+  const urlMatch = text.match(/(?:qr|item|code|id)=([^&\s]+)/i);
+  if (urlMatch) {
+    text = urlMatch[1];
+    try { text = decodeURIComponent(text); } catch (_) {}
+  }
+
+  text = text.replace(/^WH:/i, '').trim();
+  return text.toUpperCase();
+}
+
+function findPlacedItemByQr(qrInput) {
+  const key = normalizeQrLookupText(qrInput);
+  if (!key) return null;
+
+  return db.items.find(item => {
+    const itemId = normalizeQrLookupText(item.item_id);
+    const qrData = normalizeQrLookupText(item.qr_data);
+    return item.status === 'placed' && (itemId === key || qrData === key);
+  }) || null;
+}
+
+function getPendingRemoveRequest(itemId) {
+  if (!db.remove_requests) db.remove_requests = [];
+  return db.remove_requests.find(
+    r => r.item_id === itemId && r.status === 'pending'
+  ) || null;
+}
+
+function createPendingRemoveRequestForItem(item, options = {}) {
+  if (!item) {
+    const err = new Error('Item not found');
+    err.statusCode = 404;
+    throw err;
+  }
+
+  if (item.status !== 'placed') {
+    const err = new Error(`Cannot request removal for item with status: ${item.status}`);
+    err.statusCode = 400;
+    throw err;
+  }
+
+  if (!db.remove_requests) db.remove_requests = [];
+
+  const existingPending = getPendingRemoveRequest(item.item_id);
+  if (existingPending) {
+    return {
+      alreadyPending: true,
+      request: existingPending,
+      item,
+      event: null,
+      message: 'Remove request already pending',
+    };
+  }
+
+  const pos = normalizePosition(item.placed_position || item.suggested_position);
+  const now = new Date().toISOString();
+  const requestedBy = options.requested_by || 'dashboard';
+  const source = options.source || 'dashboard_export';
+
+  const request = {
+    request_id: uuidv4(),
+    type: 'remove_item',
+    status: 'pending',
+    item_id: item.item_id,
+    qr_data: item.qr_data || `WH:${item.item_id}`,
+    shelf_id: pos?.shelf_id || DEFAULT_SHELF_ID,
+    level_id: pos?.level_id || null,
+    position: pos || null,
+    requested_at: now,
+    updated_at: now,
+    requested_by: requestedBy,
+    source,
+    note: options.note || '',
+  };
+
+  db.remove_requests.unshift(request);
+
+  const evt = {
+    event_id: uuidv4(),
+    event_type: 'remove_requested',
+    timestamp: now,
+    shelf_id: request.shelf_id,
+    level_id: request.level_id,
+    item_id: item.item_id,
+    payload: {
+      request_id: request.request_id,
+      requested_by: requestedBy,
+      source,
+      note: request.note,
+      qr_data: request.qr_data,
+      placed_position: item.placed_position,
+    },
+  };
+
+  pushEvent(evt);
+  scheduleSave();
+
+  io.emit('remove_request', request);
+  io.emit('outbound_target', {
+    item_id: item.item_id,
+    request_id: request.request_id,
+    shelf_id: request.shelf_id,
+    level_id: request.level_id,
+    position: request.position,
+    source,
+  });
+  io.emit('overview', overviewStats());
+
+  return {
+    alreadyPending: false,
+    request,
+    item,
+    event: evt,
+    message: 'Remove request sent to Jetson. Waiting for physical removal confirmation.',
+  };
 }
 
 function pushEvent(evt) {
@@ -710,72 +835,98 @@ app.get('/api/items/:item_id', (req, res) => {
 
 app.post('/api/items/:item_id/remove-request', async (req, res) => {
   const item = db.items.find(i => i.item_id === req.params.item_id);
-  if (!item) return res.status(404).json({ error: 'Item not found' });
-  if (item.status !== 'placed') {
-    return res.status(400).json({ error: `Cannot request removal for item with status: ${item.status}` });
+
+  try {
+    const result = createPendingRemoveRequestForItem(item, {
+      requested_by: 'dashboard',
+      source: 'dashboard_export',
+      note: req.body?.note || '',
+    });
+
+    res.status(result.alreadyPending ? 200 : 202).json({
+      success: true,
+      message: result.message,
+      request: result.request,
+      item: result.item,
+      event: result.event,
+    });
+  } catch (err) {
+    res.status(err.statusCode || 500).json({ error: err.message || 'Remove request failed' });
+  }
+});
+
+app.post('/api/qr/lookup', async (req, res) => {
+  await syncFromDB();
+  const qrInput = req.body?.qr_data || req.body?.qr || req.body?.code || req.body?.item_id || '';
+  const normalized = normalizeQrLookupText(qrInput);
+
+  if (!normalized) {
+    return res.status(400).json({ error: 'QR data is required' });
   }
 
-  if (!db.remove_requests) db.remove_requests = [];
+  const anyItem = db.items.find(item => {
+    const itemId = normalizeQrLookupText(item.item_id);
+    const qrData = normalizeQrLookupText(item.qr_data);
+    return itemId === normalized || qrData === normalized;
+  });
 
-  const existingPending = db.remove_requests.find(
-    r => r.item_id === item.item_id && r.status === 'pending'
-  );
+  if (!anyItem) {
+    return res.status(404).json({ error: 'No item found for this QR code', normalized });
+  }
 
-  if (existingPending) {
-    return res.json({
-      success: true,
-      message: 'Remove request already pending',
-      request: existingPending,
-      item,
+  if (anyItem.status !== 'placed') {
+    return res.status(400).json({
+      error: `Item is not available for outbound because status is ${anyItem.status}`,
+      item: anyItem,
+      normalized,
     });
   }
 
-  const pos = normalizePosition(item.placed_position);
-  const now = new Date().toISOString();
-
-  const request = {
-    request_id: uuidv4(),
-    type: 'remove_item',
-    status: 'pending',
-    item_id: item.item_id,
-    shelf_id: pos?.shelf_id || DEFAULT_SHELF_ID,
-    level_id: pos?.level_id || null,
-    requested_at: now,
-    updated_at: now,
-    requested_by: 'dashboard',
-    note: req.body?.note || '',
-  };
-
-  db.remove_requests.unshift(request);
-
-  const evt = {
-    event_id: uuidv4(),
-    event_type: 'remove_requested',
-    timestamp: now,
-    shelf_id: request.shelf_id,
-    level_id: request.level_id,
-    item_id: item.item_id,
-    payload: {
-      request_id: request.request_id,
-      requested_by: 'dashboard',
-      note: request.note,
-      placed_position: item.placed_position,
-    },
-  };
-
-  pushEvent(evt);
-  scheduleSave();
-
-  io.emit('remove_request', request);
-  io.emit('overview', overviewStats());
-
-  res.status(202).json({
+  res.json({
     success: true,
-    message: 'Remove request sent to Jetson. Waiting for physical removal confirmation.',
-    request,
-    item,
-    event: evt,
+    normalized,
+    item: anyItem,
+    position: normalizePosition(anyItem.placed_position || anyItem.suggested_position),
+    pending_request: getPendingRemoveRequest(anyItem.item_id),
   });
+});
+
+app.post('/api/qr/outbound-request', async (req, res) => {
+  await syncFromDB();
+  const qrInput = req.body?.qr_data || req.body?.qr || req.body?.code || req.body?.item_id || '';
+  const normalized = normalizeQrLookupText(qrInput);
+
+  if (!normalized) {
+    return res.status(400).json({ error: 'QR data is required' });
+  }
+
+  const item = findPlacedItemByQr(qrInput);
+  if (!item) {
+    return res.status(404).json({
+      error: 'No placed item found for this QR code',
+      normalized,
+    });
+  }
+
+  try {
+    const result = createPendingRemoveRequestForItem(item, {
+      requested_by: 'dashboard_qr_search',
+      source: 'qr_lookup',
+      note: req.body?.note || 'QR search outbound request',
+    });
+
+    res.status(result.alreadyPending ? 200 : 202).json({
+      success: true,
+      message: result.message,
+      normalized,
+      item: result.item,
+      position: normalizePosition(result.item.placed_position || result.item.suggested_position),
+      request: result.request,
+      event: result.event,
+    });
+  } catch (err) {
+    res.status(err.statusCode || 500).json({ error: err.message || 'QR outbound request failed' });
+  }
 });
 
 app.get('/api/remove-requests', (req, res) => {
