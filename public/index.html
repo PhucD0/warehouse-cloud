@@ -179,6 +179,7 @@ tr:hover td{background:rgba(0,0,0,.025)}
 .badge.unknown    {background:rgba(139,90,246,.1);color:#8b5cf6;border:1px solid rgba(139,90,246,.2)}
 .badge.ok         {background:rgba(16,185,129,.1);color:#10b981;border:1px solid rgba(16,185,129,.2)}
 .badge.warning    {background:rgba(245,158,11,.1);color:#f59e0b;border:1px solid rgba(245,158,11,.25)}
+.badge.outbound_pending{background:rgba(245,158,11,.12);color:#d97706;border:1px solid rgba(245,158,11,.30)}
 
 /* ── Shelf visual ── */
 .shelf-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
@@ -205,8 +206,6 @@ tr:hover td{background:rgba(0,0,0,.025)}
   transition:border-color .12s;
 }
 .item-chip:hover{border-color:var(--accent2);color:var(--accent2)}
-.item-chip.outbound{border:1px solid rgba(239,68,68,.55);color:#ef4444;background:rgba(239,68,68,.08);box-shadow:0 0 0 1px rgba(239,68,68,.18) inset}
-.item-chip.outbound::before{content:'OUT';font-size:8px;margin-right:4px;color:#ef4444}
 
 /* ── Progress bar fill colors ── */
 .fill-ok{background:var(--success)}
@@ -431,9 +430,6 @@ tr:hover td{background:rgba(0,0,0,.025)}
   overflow:hidden;
 }
 .shelf-item-box:hover{filter:brightness(1.2);z-index:2}
-.shelf-item-box.outbound{box-shadow:0 0 0 3px rgba(239,68,68,.9),0 0 0 6px rgba(239,68,68,.16);z-index:3;animation:outbound-pulse 1.2s ease-in-out infinite}
-.shelf-item-box.outbound::after{content:'OUTBOUND';position:absolute;top:4px;left:4px;right:4px;text-align:center;font-size:7px;line-height:1;padding:2px 3px;background:rgba(239,68,68,.92);color:#fff;border-radius:999px;letter-spacing:.04em}
-@keyframes outbound-pulse{0%,100%{transform:translateZ(0);box-shadow:0 0 0 3px rgba(239,68,68,.9),0 0 0 6px rgba(239,68,68,.16)}50%{box-shadow:0 0 0 3px rgba(239,68,68,1),0 0 0 10px rgba(239,68,68,.1)}}
 .shelf-item-box .item-label{
   writing-mode:vertical-rl;
   text-orientation:mixed;
@@ -477,6 +473,48 @@ tr:hover td{background:rgba(0,0,0,.025)}
   border:2px dashed #ef4444;
   background:rgba(239,68,68,.07);
 }
+
+
+
+/* ── QR Search / Outbound highlight ── */
+.map-shelf.outbound{
+  border-color:#ef4444;
+  background:rgba(239,68,68,.12);
+  animation:outbound-pulse 1.25s ease-in-out infinite;
+}
+.map-shelf.outbound .map-shelf-label{color:#ef4444}
+.outbound-badge{background:#ef4444!important;color:#fff!important}
+.item-chip.outbound{border-color:#ef4444;color:#ef4444;background:rgba(239,68,68,.09);box-shadow:0 0 0 1px rgba(239,68,68,.16) inset}
+.shelf-item-box.outbound{
+  background:rgba(239,68,68,.10)!important;
+  border:2px solid #ef4444!important;
+  color:#ef4444!important;
+  box-shadow:0 0 0 3px rgba(239,68,68,.18), 0 0 0 6px rgba(239,68,68,.08);
+  animation:outbound-pulse 1.25s ease-in-out infinite;
+  z-index:5;
+}
+.outbound-marker{
+  position:absolute;top:3px;left:3px;right:3px;
+  background:#ef4444;color:#fff;
+  font-size:7px;font-family:var(--mono);font-weight:700;
+  border-radius:2px;padding:1px 2px;text-align:center;
+}
+@keyframes outbound-pulse{
+  0%,100%{box-shadow:0 0 0 3px rgba(239,68,68,.18),0 0 0 6px rgba(239,68,68,.08)}
+  50%{box-shadow:0 0 0 3px rgba(239,68,68,.30),0 0 0 10px rgba(239,68,68,.10)}
+}
+.qr-search-grid{display:grid;grid-template-columns:minmax(280px,420px) 1fr;gap:16px;align-items:start}
+@media(max-width:900px){.qr-search-grid{grid-template-columns:1fr}}
+.qr-input-big{width:100%;font-size:14px;padding:12px 14px;font-family:var(--mono)}
+.qr-upload-box{border:1px dashed var(--border2);border-radius:var(--radius);background:var(--bg3);padding:16px;display:flex;flex-direction:column;gap:10px}
+.qr-file-input{width:100%;padding:12px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);font-family:var(--mono);font-size:12px}
+.qr-preview{display:flex;gap:12px;align-items:center;min-height:80px}
+.qr-preview img{max-width:120px;max-height:120px;border:1px solid var(--border);border-radius:4px;background:white;padding:4px}
+.qr-decoded{font-family:var(--mono);font-size:12px;color:var(--text);word-break:break-all}
+.qr-decoded.empty{color:var(--text3)}
+.qr-result-card{border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);padding:16px}
+.qr-result-title{font-size:13px;font-weight:600;margin-bottom:8px}
+.qr-help{font-size:11px;color:var(--text3);font-family:var(--mono);line-height:1.6}
 
 /* ── Responsive ── */
 @media(max-width:600px){
@@ -547,6 +585,13 @@ tr:hover td{background:rgba(0,0,0,.025)}
         </svg>
         Quản lý hàng
       </div>
+      <div class="nav-item" data-page="qrsearch" onclick="nav('qrsearch')">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="2" y="2" width="5" height="5" rx=".8"/><rect x="9" y="2" width="5" height="5" rx=".8"/>
+          <rect x="2" y="9" width="5" height="5" rx=".8"/><path d="M10 10h4v4h-4z"/><path d="M9 13h1M13 9v1"/>
+        </svg>
+        Tìm hàng QR
+      </div>
       <div class="nav-item" data-page="alerts" onclick="nav('alerts')">
         <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
           <path d="M8 2L1 13h14L8 2z"/>
@@ -602,11 +647,16 @@ let allAlerts = [];
 let allEvents = [];
 let allRemoveRequests = [];
 let alertCount = 0;
+let qrLookupResult = null;
+let lastQrInput = "";
+let qrUploadedFile = null;
+let qrUploadedPreview = "";
 
 const PAGE_META = {
   overview: { title: 'Tổng quan', sub: 'Warehouse overview dashboard' },
   shelves:  { title: 'Sơ đồ kệ', sub: 'Shelf level visualization' },
   items:    { title: 'Quản lý hàng', sub: 'Item management & tracking' },
+  qrsearch: { title: 'Tìm hàng QR', sub: 'Lookup item by QR and send outbound request' },
   alerts:   { title: 'Cảnh báo', sub: 'Inventory count warnings' },
   events:   { title: 'Event Log', sub: 'All system events from Jetson Nano' },
   detail:   { title: 'Chi tiết mặt hàng', sub: 'Item detail & event history' },
@@ -623,11 +673,9 @@ socket.on('disconnect', () => setWsStatus(false));
 socket.on('overview', d => { overviewData = d; if (currentPage === 'overview') renderOverview(); });
 socket.on('event', e => {
   allEvents.unshift(e);
-  if (e.event_type === 'item_removed' && e.item_id) {
-    allRemoveRequests = allRemoveRequests.filter(r => !(r.status === 'pending' && r.item_id === e.item_id));
-    if (currentPage === 'shelves') renderShelves();
-    if (currentPage === 'items') renderItems();
-    if (currentPage === 'detail' && e.item_id === currentItemId) renderDetail(currentItemId);
+  if (e.event_type === 'item_removed') {
+    allRemoveRequests = allRemoveRequests.filter(r => !(r.item_id === e.item_id && r.status === 'pending'));
+    if (['shelves','items','qrsearch','detail','overview'].includes(currentPage)) setTimeout(loadPage, 150);
   }
   if (e.event_type === 'inventory_count_warning') {
     alertCount++;
@@ -638,12 +686,14 @@ socket.on('event', e => {
   if (currentPage === 'events') renderEvents();
   if (currentPage === 'detail' && e.item_id === currentItemId) loadPage();
 });
-socket.on('remove_request', req => {
-  if (!req) return;
-  allRemoveRequests = [req, ...allRemoveRequests.filter(r => r.request_id !== req.request_id)];
-  if (currentPage === 'shelves') renderShelves();
-  if (currentPage === 'items') renderItems();
-  if (currentPage === 'detail' && req.item_id === currentItemId) renderDetail(currentItemId);
+
+socket.on('remove_request', r => {
+  upsertRemoveRequest(r);
+  toast(`📦 Đã tạo yêu cầu outbound: ${r.item_id}`, 'warn');
+  if (['shelves','items','qrsearch','detail'].includes(currentPage)) loadPage();
+});
+socket.on('outbound_target', t => {
+  if (t?.item_id) toast(`Jetson sẽ highlight outbound cho ${t.item_id}`, 'warn');
 });
 
 socket.on('jetson_heartbeat', () => {
@@ -679,9 +729,10 @@ async function loadPage() {
     case 'overview': await fetchOverview(); renderOverview(); break;
     case 'shelves':  await fetchOverview(); await fetchItems(); await fetchRemoveRequests(); renderShelves(); break;
     case 'items':    await fetchItems(); await fetchRemoveRequests(); renderItems(); break;
+    case 'qrsearch': await fetchItems(); await fetchRemoveRequests(); renderQrSearch(); break;
     case 'alerts':   await fetchAlerts(); renderAlerts(); break;
     case 'events':   await fetchEvents(); renderEvents(); break;
-    case 'detail':   await renderDetail(currentItemId); break;
+    case 'detail':   await fetchRemoveRequests(); await renderDetail(currentItemId); break;
   }
 }
 
@@ -690,31 +741,89 @@ async function fetchOverview()  { try { const r = await fetch(`${API}/api/overvi
 async function fetchItems()     { try { const r = await fetch(`${API}/api/items`); const d = await r.json(); allItems = d.items; } catch(e){} }
 async function fetchAlerts()    { try { const r = await fetch(`${API}/api/alerts`); const d = await r.json(); allAlerts = d.alerts; alertCount = allAlerts.length; updateAlertBadge(); } catch(e){} }
 async function fetchEvents()    { try { const r = await fetch(`${API}/api/events?limit=100`); const d = await r.json(); allEvents = d.events; } catch(e){} }
-async function fetchRemoveRequests() { try { const r = await fetch(`${API}/api/remove-requests?status=pending`); const d = await r.json(); allRemoveRequests = d.requests || []; } catch(e){ allRemoveRequests = []; } }
-
-function getPendingRequestMap() {
-  const map = new Map();
-  for (const req of (allRemoveRequests || [])) {
-    if (req && req.status === 'pending' && req.item_id) map.set(req.item_id, req);
-  }
-  return map;
-}
-
-function getPendingShelfCounts() {
-  const counts = {};
-  for (const req of (allRemoveRequests || [])) {
-    if (!req || req.status !== 'pending') continue;
-    const sid = req.shelf_id;
-    if (sid) counts[sid] = (counts[sid] || 0) + 1;
-  }
-  return counts;
-}
+async function fetchRemoveRequests(status='pending') { try { const r = await fetch(`${API}/api/remove-requests?status=${encodeURIComponent(status)}`); const d = await r.json(); allRemoveRequests = d.requests || []; } catch(e){ allRemoveRequests = []; } }
 
 function updateAlertBadge() {
   const b = document.getElementById('alert-badge');
   if (alertCount > 0) { b.style.display='inline-block'; b.textContent = alertCount; }
   else b.style.display='none';
 }
+
+
+function upsertRemoveRequest(req) {
+  if (!req || !req.request_id) return;
+  const idx = allRemoveRequests.findIndex(r => r.request_id === req.request_id);
+  if (idx >= 0) allRemoveRequests[idx] = req;
+  else allRemoveRequests.unshift(req);
+}
+
+function getPendingRemoveRequestForItem(itemId) {
+  const request = (allRemoveRequests || []).find(r => r.item_id === itemId && r.status === 'pending');
+  if (request) return request;
+
+  // Backend may also decorate the item itself with outbound metadata.
+  const item = (allItems || []).find(i => i.item_id === itemId);
+  if (item?.pending_remove_request) return item.pending_remove_request;
+  if (item?.outbound_request) return item.outbound_request;
+  if (item?.outbound_status === 'pending') {
+    return {
+      request_id: item.outbound_request_id || 'pending',
+      item_id: item.item_id,
+      status: 'pending',
+      source: item.outbound_source || 'unknown',
+    };
+  }
+  return null;
+}
+
+function upsertItem(item) {
+  if (!item || !item.item_id) return;
+  const idx = allItems.findIndex(i => i.item_id === item.item_id);
+  if (idx >= 0) allItems[idx] = item;
+  else allItems.unshift(item);
+}
+
+function effectiveStatusForItem(item) {
+  return getPendingRemoveRequestForItem(item?.item_id) ? 'outbound_pending' : (item?.ui_status || item?.display_status || item?.status || 'unknown');
+}
+
+function statusBadgeClass(status) {
+  return {
+    placed:'placed', removed:'removed',
+    waiting_for_placement:'waiting',
+    missing_suspected:'missing', unknown_object:'unknown',
+    outbound_pending:'outbound_pending'
+  }[status] || 'unknown';
+}
+
+function normalizeQrClient(value) {
+  let text = String(value || '').trim();
+  try { text = decodeURIComponent(text); } catch(e) {}
+
+  const urlMatch = text.match(/(?:qr|item|code|id)=([^&\s]+)/i);
+  if (urlMatch) {
+    text = urlMatch[1];
+    try { text = decodeURIComponent(text); } catch(e) {}
+  }
+
+  text = text.replace(/^[\'"]|[\'"]$/g, '').trim();
+  text = text.split(/[?#]/)[0].trim();
+  text = text.replace(/^.*[\\/]/, '');
+  text = text.replace(/\.(png|jpg|jpeg|svg|webp)$/i, '');
+  text = text.replace(/^WH:/i, '').trim();
+  text = text.replace(/(?:[_-]QR(?:[_-]CODE)?|[_-]QRCODE)$/i, '').trim();
+
+  return text.toUpperCase();
+}
+
+function escapeHtml(v) {
+  return String(v ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+
+function qrValueForItem(item) {
+  return item?.qr_data || `WH:${item?.item_id || ''}`;
+}
+
 
 // ── Render: Overview ────────────────────────────────────────────────────────
 function renderOverview() {
@@ -811,8 +920,6 @@ function renderShelves() {
 
   // Build list of waiting items to find suggested shelves
   const waitingItems = allItems.filter(i => i.status === 'waiting_for_placement' && i.suggested_position);
-  const pendingReqMap = getPendingRequestMap();
-  const pendingOutboundItems = allItems.filter(i => pendingReqMap.has(i.item_id));
 
   document.getElementById('content').innerHTML = `
     <div class="sec-head mb-16">
@@ -822,7 +929,7 @@ function renderShelves() {
           <span style="width:12px;height:12px;border:2px dashed #ef4444;border-radius:2px;display:inline-block"></span>Kệ gợi ý
         </span>
         <span style="display:flex;align-items:center;gap:5px;font-size:10px;font-family:var(--mono);color:#ef4444">
-          <span style="width:12px;height:12px;border:2px solid #ef4444;border-radius:2px;background:rgba(239,68,68,.08);display:inline-block"></span>Outbound đang chờ lấy
+          <span style="width:12px;height:12px;border:2px solid #ef4444;border-radius:2px;background:rgba(239,68,68,.09);display:inline-block"></span>Outbound pending
         </span>
         <span style="display:flex;align-items:center;gap:5px;font-size:10px;font-family:var(--mono);color:var(--success)">
           <span style="width:12px;height:12px;border:2px dashed #2d7a4f;border-radius:2px;background:rgba(16,185,129,.1);display:inline-block"></span>Kệ bình thường
@@ -837,8 +944,8 @@ function renderShelves() {
     <div class="shelf-grid" id="shelf-detail-grid"></div>
   `;
 
-  renderWarehouseMap(d, waitingItems, pendingOutboundItems);
-  renderShelfDetailGrid(d, waitingItems, pendingReqMap);
+  renderWarehouseMap(d, waitingItems);
+  renderShelfDetailGrid(d, waitingItems);
 }
 
 // Group shelves into zones of 2 (A+B → KHU A, C+D → KHU B, ...)
@@ -855,13 +962,11 @@ function getZoneLabel(shelfId) {
   return 'KHU ' + shelfId;
 }
 
-function renderWarehouseMap(d, waitingItems, pendingOutboundItems = []) {
+function renderWarehouseMap(d, waitingItems) {
   const suggestedShelfIds = new Set(
     waitingItems.map(i => i.suggested_position?.shelf_id).filter(Boolean)
   );
-  const outboundShelfIds = new Set(
-    pendingOutboundItems.map(i => (i.placed_position || i.suggested_position)?.shelf_id).filter(Boolean)
-  );
+  const outboundShelfIds = new Set((allRemoveRequests || []).filter(r => r.status === 'pending').map(r => r.shelf_id).filter(Boolean));
 
   // Group shelves by zone label
   const zones = {};
@@ -885,11 +990,6 @@ function renderWarehouseMap(d, waitingItems, pendingOutboundItems = []) {
     const sid = it.suggested_position?.shelf_id;
     if (sid) shelfWaitCount[sid] = (shelfWaitCount[sid] || 0) + 1;
   }
-  const shelfOutboundCount = {};
-  for (const it of pendingOutboundItems) {
-    const sid = (it.placed_position || it.suggested_position)?.shelf_id;
-    if (sid) shelfOutboundCount[sid] = (shelfOutboundCount[sid] || 0) + 1;
-  }
 
   const zoneKeys = Object.keys(zones);
   const html = `<div class="warehouse-map">
@@ -907,10 +1007,9 @@ function renderWarehouseMap(d, waitingItems, pendingOutboundItems = []) {
               const isOutbound = outboundShelfIds.has(sh.shelf_id);
               const cnt = shelfItemCount[sh.shelf_id] || 0;
               const wcnt = shelfWaitCount[sh.shelf_id] || 0;
-              const ocnt = shelfOutboundCount[sh.shelf_id] || 0;
               const dots = Array.from({length: Math.min(cnt, 6)}, () => '<div class="items-dot"></div>').join('');
               return `<div class="map-shelf${isSuggested?' suggested':''}${isOutbound?' outbound':''}" onclick="openShelfModal('${sh.shelf_id}')" title="${sh.label||sh.shelf_id} — click để xem chi tiết">
-                ${isOutbound ? `<div class="map-shelf-badge outbound">${ocnt} OUT</div>` : (isSuggested ? `<div class="map-shelf-badge waiting">${wcnt} chờ</div>` : '')}
+                ${isOutbound ? `<div class="map-shelf-badge outbound-badge">OUT</div>` : (isSuggested ? `<div class="map-shelf-badge">${wcnt} chờ</div>` : '')}
                 <div class="map-shelf-label">${sh.label||sh.shelf_id}</div>
                 <div class="map-shelf-items-dot">${dots}</div>
                 <div class="map-shelf-sub">${cnt} vật</div>
@@ -925,7 +1024,7 @@ function renderWarehouseMap(d, waitingItems, pendingOutboundItems = []) {
   document.getElementById('wh-map-container').innerHTML = html;
 }
 
-function renderShelfDetailGrid(d, waitingItems, pendingReqMap = new Map()) {
+function renderShelfDetailGrid(d, waitingItems) {
   const shelfHtml = (d.shelves || []).map(sh => {
     if (!sh) return '';
     // Sort levels T1 at top to match 3D model
@@ -946,21 +1045,17 @@ function renderShelfDetailGrid(d, waitingItems, pendingReqMap = new Map()) {
         const warn = lv.expected_count !== lv.detected_count;
         const fillClass = pct >= 90 ? 'fill-full' : pct >= 65 ? 'fill-warn' : 'fill-ok';
         const items = lv.items || [];
-        const outboundItems = items.filter(it => pendingReqMap.has(it.item_id));
         return `<div class="floor-block${warn?' warn':''}">
           <div class="floor-row-top">
             <span class="floor-label">Tầng ${lv.level_num}</span>
-            <span style="display:flex;gap:6px;align-items:center">
-              ${outboundItems.length ? `<span class="badge danger" style="font-size:9px">OUTBOUND ${outboundItems.length}</span>` : ''}
-              <span style="font-size:10px;font-family:var(--mono);color:${warn?'var(--warn)':'var(--text3)'}">
-                ${lv.detected_count}/${lv.expected_count}
-              </span>
+            <span style="font-size:10px;font-family:var(--mono);color:${warn?'var(--warn)':'var(--text3)'}">
+              ${lv.detected_count}/${lv.expected_count}
             </span>
           </div>
           <div class="capacity-bar"><div class="capacity-fill ${fillClass}" style="width:${pct}%"></div></div>
           <div style="font-size:9px;color:var(--text3);font-family:var(--mono);margin-bottom:6px">${lv.used_cm}/${lv.capacity_cm} cm (${pct}%)</div>
           <div class="item-chips">
-            ${items.map(it=>`<span class="item-chip ${pendingReqMap.has(it.item_id)?'outbound':''}" onclick="openDetail('${it.item_id}')">${it.item_id.slice(-4)}</span>`).join('')}
+            ${items.map(it=>`<span class="item-chip${getPendingRemoveRequestForItem(it.item_id)?' outbound':''}" onclick="openDetail('${it.item_id}')">${it.item_id.slice(-4)}${getPendingRemoveRequestForItem(it.item_id)?' OUT':''}</span>`).join('')}
             ${items.length===0?`<span style="font-size:9px;color:var(--text3);font-style:italic">trống</span>`:''}
           </div>
         </div>`;
@@ -980,9 +1075,10 @@ async function openShelfModal(shelfId) {
   body.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text3)">Đang tải...</div>';
   overlay.classList.add('open');
 
-  // Ensure fresh data
+  // Ensure fresh data, including QR/outbound remove requests
   await fetchOverview();
-  if (allItems.length === 0) await fetchItems();
+  await fetchItems();
+  await fetchRemoveRequests();
 
   const d = overviewData;
   const shelf = (d?.shelves || []).find(s => s?.shelf_id === shelfId);
@@ -992,13 +1088,13 @@ async function openShelfModal(shelfId) {
     i.status === 'waiting_for_placement' &&
     i.suggested_position?.shelf_id === shelfId
   );
-  const pendingReqMap = getPendingRequestMap();
-  const outboundItems = allItems.filter(i => pendingReqMap.has(i.item_id) && (i.placed_position || i.suggested_position)?.shelf_id === shelfId);
+
+  const outboundCount = (allRemoveRequests || []).filter(r => r.status === 'pending' && r.shelf_id === shelfId).length;
 
   title.textContent = `Mô phỏng kệ: ${shelf.label || shelf.shelf_id}`;
-  sub.textContent = `${shelf.shelf_id} · ${shelf.physical_size_cm?.w}×${shelf.physical_size_cm?.h}×${shelf.physical_size_cm?.d} cm · ${waitingItems.length} vật đang chờ gợi ý · ${outboundItems.length} outbound`;
+  sub.textContent = `${shelf.shelf_id} · ${shelf.physical_size_cm?.w}×${shelf.physical_size_cm?.h}×${shelf.physical_size_cm?.d} cm · ${waitingItems.length} vật đang chờ gợi ý · ${outboundCount} outbound pending`;
 
-  body.innerHTML = renderShelfDetail3D(shelf, waitingItems, pendingReqMap);
+  body.innerHTML = renderShelfDetail3D(shelf, waitingItems);
 }
 
 function closeShelfModal(evt) {
@@ -1016,7 +1112,7 @@ const ITEM_COLORS = [
   { bg: 'rgba(59,130,246,.2)',  border: '#3b82f6', text: '#3b82f6' },
 ];
 
-function renderShelfDetail3D(shelf, waitingItems, pendingReqMap = new Map()) {
+function renderShelfDetail3D(shelf, waitingItems) {
   // Sort levels: T1 at top (first), T4 at bottom
   const levels = [...(shelf.levels || [])].sort((a,b) => Number(a.level_num||0) - Number(b.level_num||0));
   const capacityCm = shelf.physical_size_cm?.w || 60;
@@ -1046,12 +1142,15 @@ function renderShelfDetail3D(shelf, waitingItems, pendingReqMap = new Map()) {
       const col  = ITEM_COLORS[colorIdx % ITEM_COLORS.length];
       colorIdx++;
       const shortId = it.item_id.slice(-6);
-      const isOutbound = pendingReqMap.has(it.item_id);
-      const requestId = isOutbound ? pendingReqMap.get(it.item_id)?.request_id : null;
-      itemBoxes += `<div class="shelf-item-box ${isOutbound?'outbound':''}"
-        style="left:${xPct}%;width:${wPct}%;height:${hPx}px;
-               background:${col.bg};border:2px solid ${isOutbound ? '#ef4444' : col.border};color:${isOutbound ? '#ef4444' : col.text}"
-        onclick="openDetail('${it.item_id}')" title="${it.item_id} — ${it.size_cm?.w}×${it.size_cm?.h}×${it.size_cm?.d} cm · x=${xOff}cm${isOutbound ? ' · outbound pending' : ''}${requestId ? ' · request='+requestId : ''}">
+      const pendingReq = getPendingRemoveRequestForItem(it.item_id);
+      const boxClass = pendingReq ? 'shelf-item-box outbound' : 'shelf-item-box';
+      const boxStyle = pendingReq
+        ? 'background:rgba(239,68,68,.10);border:2px solid #ef4444;color:#ef4444'
+        : `background:${col.bg};border:2px solid ${col.border};color:${col.text}`;
+      itemBoxes += `<div class="${boxClass}"
+        style="left:${xPct}%;width:${wPct}%;height:${hPx}px;${boxStyle}"
+        onclick="openDetail('${it.item_id}')" title="${it.item_id} — ${it.size_cm?.w}×${it.size_cm?.h}×${it.size_cm?.d} cm · x=${xOff}cm${pendingReq?' · OUTBOUND PENDING':''}">
+        ${pendingReq ? '<span class="outbound-marker">OUTBOUND</span>' : ''}
         <span class="item-label">${shortId}</span>
       </div>`;
     }
@@ -1111,8 +1210,8 @@ function renderShelfDetail3D(shelf, waitingItems, pendingReqMap = new Map()) {
         <span>Vị trí gợi ý (chờ xếp kệ)</span>
       </div>
       <div class="legend-item">
-        <div class="legend-box" style="background:rgba(239,68,68,.08);border:2px solid #ef4444"></div>
-        <span>Outbound đang chờ Jetson lấy ra</span>
+        <div class="legend-box" style="background:rgba(239,68,68,.09);border:2px solid #ef4444"></div>
+        <span>Outbound pending — Jetson đang highlight vùng REMOVE</span>
       </div>
       <div class="legend-item">
         <div class="legend-box" style="background:var(--bg4);border:1px solid var(--border)"></div>
@@ -1140,9 +1239,11 @@ function renderItems() {
   const statusFilter = document.getElementById('sf') ? document.getElementById('sf').value : '';
   const search = document.getElementById('sq') ? document.getElementById('sq').value.toLowerCase() : '';
 
-  const pendingReqMap = getPendingRequestMap();
   let items = allItems;
-  if (statusFilter) items = items.filter(i => i.status === statusFilter);
+  if (statusFilter) {
+    if (statusFilter === 'outbound_pending') items = items.filter(i => Boolean(getPendingRemoveRequestForItem(i.item_id)) || i.outbound_status === 'pending');
+    else items = items.filter(i => i.status === statusFilter);
+  }
   if (search) items = items.filter(i =>
     i.item_id.toLowerCase().includes(search) ||
     (i.placed_position?.shelf_id||'').toLowerCase().includes(search) ||
@@ -1151,18 +1252,14 @@ function renderItems() {
 
   const rows = items.map(it => {
     const pos = it.placed_position || it.suggested_position;
-    const isOutboundPending = pendingReqMap.has(it.item_id);
-    const statusText = isOutboundPending ? 'outbound_pending' : it.status;
-    const statusLabel = isOutboundPending ? 'danger' : ({
-      placed:'placed', removed:'removed',
-      waiting_for_placement:'waiting',
-      missing_suspected:'missing', unknown_object:'unknown'
-    }[it.status] || 'unknown');
+    const pendingReq = getPendingRemoveRequestForItem(it.item_id);
+    const effectiveStatus = pendingReq ? 'outbound_pending' : (it.ui_status || it.display_status || it.status);
+    const statusLabel = statusBadgeClass(effectiveStatus);
     return `<tr>
       <td><span class="mono" style="cursor:pointer;color:var(--accent2)" onclick="openDetail('${it.item_id}')">${it.item_id}</span></td>
       <td><span class="mono" style="font-size:10px">${it.qr_data}</span></td>
       <td><span class="mono">${it.size_cm?.w}×${it.size_cm?.h}×${it.size_cm?.d} cm</span></td>
-      <td><span class="badge ${statusLabel}">${statusText}</span></td>
+      <td><span class="badge ${statusLabel}">${effectiveStatus}</span></td>
       <td><span class="mono">${pos?.shelf_id||'—'}</span></td>
       <td><span class="mono">${pos?.level_id||'—'}</span></td>
       <td><span class="mono" style="font-size:10px">${pos?.x_offset_cm!=null?pos.x_offset_cm+'cm':'—'}</span></td>
@@ -1170,7 +1267,8 @@ function renderItems() {
       <td>
         <div style="display:flex;gap:4px">
           <button class="btn btn-ghost btn-sm" onclick="openDetail('${it.item_id}')">Detail</button>
-          ${isOutboundPending?`<span class="badge danger">chờ Jetson</span>`:(it.status==='placed'?`<button class="btn btn-danger btn-sm" onclick="removeItem('${it.item_id}')">Xuất</button>`:'')}
+          ${it.status==='placed'?`<button class="btn btn-ghost btn-sm" onclick="downloadItemQr('${it.item_id}')">Tải QR</button>`:''}
+          ${it.status==='placed' ? (pendingReq ? `<span class="badge warning">chờ Jetson</span>` : `<button class="btn btn-danger btn-sm" onclick="removeItem('${it.item_id}')">Xuất</button>`) : ''}
         </div>
       </td>
     </tr>`;
@@ -1182,6 +1280,7 @@ function renderItems() {
       <select id="sf" onchange="renderItems()">
         <option value="">Tất cả trạng thái</option>
         <option value="placed">placed</option>
+        <option value="outbound_pending">outbound_pending</option>
         <option value="waiting_for_placement">waiting_for_placement</option>
         <option value="removed">removed</option>
         <option value="missing_suspected">missing_suspected</option>
@@ -1284,19 +1383,19 @@ async function renderDetail(itemId) {
   const c = document.getElementById('content');
   c.innerHTML = '<div class="empty-state">Đang tải...</div>';
   try {
-    await fetchRemoveRequests();
     const r = await fetch(`${API}/api/items/${itemId}`);
     if (!r.ok) { c.innerHTML = '<div class="empty-state">Không tìm thấy item</div>'; return; }
     const { item, events } = await r.json();
 
     const pos = item.placed_position || item.suggested_position;
-    const pendingReqMap = getPendingRequestMap();
-    const pendingReq = pendingReqMap.get(item.item_id);
-    const detailStatusText = pendingReq ? 'outbound_pending' : item.status;
-    const statusLabel = pendingReq ? 'danger' : ({ placed:'placed', removed:'removed', waiting_for_placement:'waiting', missing_suspected:'missing', unknown_object:'unknown' }[item.status] || 'unknown');
+    upsertItem(item);
+    const pendingReq = getPendingRemoveRequestForItem(item.item_id);
+    const effectiveStatus = pendingReq ? 'outbound_pending' : (item.ui_status || item.display_status || item.status);
+    const statusLabel = statusBadgeClass(effectiveStatus);
 
-    // Draw a simple QR-like pattern
-    const qrPat = genQRPattern(item.item_id);
+    const qrVisual = item.status === 'placed'
+      ? `<img src="${API}/api/items/${encodeURIComponent(item.item_id)}/qr.svg" alt="QR ${item.item_id}" style="width:120px;height:120px;background:white;border-radius:4px" onerror="this.replaceWith(document.createTextNode('QR chưa sẵn sàng'))"/>`
+      : genQRPattern(item.item_id);
 
     const evtHtml = events.length === 0 ? '<div style="padding:16px;color:var(--text3);font-size:12px">Không có events</div>'
       : events.map(e => {
@@ -1314,16 +1413,17 @@ async function renderDetail(itemId) {
     c.innerHTML = `
       <div style="margin-bottom:16px;display:flex;gap:8px;align-items:center">
         <button class="btn btn-ghost btn-sm" onclick="nav('items')">← Quay lại</button>
-        <span class="badge ${statusLabel}">${detailStatusText}</span>
-        ${pendingReq ? `<span class="badge danger">Request ${pendingReq.request_id.slice(0,8)}</span>` : ''}
-        ${!pendingReq && item.status==='placed'?`<button class="btn btn-danger btn-sm" onclick="removeItem('${item.item_id}')">Xuất kho</button>`:''}
+        <span class="badge ${statusLabel}">${effectiveStatus}</span>
+        ${item.status==='placed'?`<button class="btn btn-ghost btn-sm" onclick="downloadItemQr('${item.item_id}')">Tải QR</button>`:''}
+        ${item.status==='placed' ? (pendingReq ? `<span class="badge warning">Đang chờ Jetson outbound</span>` : `<button class="btn btn-danger btn-sm" onclick="removeItem('${item.item_id}')">Xuất kho</button>`) : ''}
       </div>
       <div class="detail-grid">
         <div>
           <div class="qr-box mb-16">
             <div style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-bottom:8px">QR Code</div>
-            <div class="qr-visual">${qrPat}</div>
+            <div class="qr-visual">${qrVisual}</div>
             <div style="font-size:10px;font-family:var(--mono);color:var(--text2);text-align:center">${item.qr_data}</div>
+            <button class="btn btn-ghost btn-sm" onclick="downloadItemQr('${item.item_id}')">Tải mã QR</button>
             <div style="font-size:9px;color:var(--text3);font-family:var(--mono)">${item.qr_path}</div>
           </div>
           <div class="card-sm">
@@ -1341,8 +1441,8 @@ async function renderDetail(itemId) {
             <div class="kv-list">
               <div class="kv"><span class="kv-k">Item ID</span><span class="kv-v mono">${item.item_id}</span></div>
               <div class="kv"><span class="kv-k">QR Data</span><span class="kv-v mono">${item.qr_data}</span></div>
-              <div class="kv"><span class="kv-k">Status</span><span class="kv-v"><span class="badge ${statusLabel}">${detailStatusText}</span></span></div>
-              ${pendingReq ? `<div class="kv"><span class="kv-k">Outbound request</span><span class="kv-v mono">${pendingReq.request_id} · pending</span></div>` : ''}
+              <div class="kv"><span class="kv-k">Status</span><span class="kv-v"><span class="badge ${statusLabel}">${effectiveStatus}</span></span></div>
+              ${pendingReq ? `<div class="kv"><span class="kv-k">Outbound request</span><span class="kv-v mono">${pendingReq.request_id}<br/>status=${pendingReq.status}</span></div>` : ''}
               <div class="kv"><span class="kv-k">Suggested position</span><span class="kv-v mono">${item.suggested_position?`${item.suggested_position.shelf_id} · ${item.suggested_position.level_id} · x=${item.suggested_position.x_offset_cm}cm`:'—'}</span></div>
               <div class="kv"><span class="kv-k">Placed position</span><span class="kv-v mono">${item.placed_position?`${item.placed_position.shelf_id} · ${item.placed_position.level_id} · x=${item.placed_position.x_offset_cm}cm`:'—'}</span></div>
               <div class="kv"><span class="kv-k">Created at</span><span class="kv-v mono">${fmtDate(item.created_at)}</span></div>
@@ -1359,14 +1459,319 @@ async function renderDetail(itemId) {
   } catch(e) { c.innerHTML = '<div class="empty-state">Lỗi tải dữ liệu</div>'; }
 }
 
+
+// ── Render: QR Search ───────────────────────────────────────────────────────
+function renderQrSearch() {
+  const placedCount = allItems.filter(i => i.status === 'placed').length;
+  const pendingCount = (allRemoveRequests || []).filter(r => r.status === 'pending').length;
+  document.getElementById('content').innerHTML = `
+    <div class="qr-search-grid">
+      <div class="card">
+        <div class="sec-title" style="margin-bottom:12px">Upload mã QR đã tải từ hệ thống</div>
+        <div class="qr-upload-box">
+          <input id="qr-file-input" class="qr-file-input" type="file" accept="image/*,.svg" onchange="handleQrFileUpload(event)"/>
+          <div id="qr-upload-preview" class="qr-preview">
+            ${renderQrUploadPreview()}
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="lookupQrItem()">Quét QR & tìm vị trí</button>
+          <button class="btn btn-danger" onclick="requestOutboundByQr()">Quét QR & gửi outbound</button>
+        </div>
+        <div class="qr-help" style="margin-top:14px">
+          Input chính là <b>file QR</b> tải từ dashboard, không nhập mã hàng thủ công.<br/>
+          Dashboard sẽ đọc nội dung QR, tìm item có trạng thái <b>placed</b>, sau đó có thể tạo remove_request pending để Jetson highlight vùng REMOVE.
+        </div>
+        <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+          <span class="badge placed">${placedCount} placed</span>
+          <span class="badge warning">${pendingCount} pending outbound</span>
+          ${lastQrInput ? `<span class="badge ok">QR=${escapeHtml(lastQrInput)}</span>` : ''}
+        </div>
+      </div>
+      <div id="qr-result">
+        ${qrLookupResult ? renderQrResult(qrLookupResult) : '<div class="empty-state">Upload file QR để tìm vị trí hàng trên kệ.</div>'}
+      </div>
+    </div>
+  `;
+}
+
+function renderQrUploadPreview() {
+  if (!qrUploadedFile) {
+    return `<div class="qr-decoded empty">Chưa chọn file QR. Hãy dùng nút “Tải QR” ở item placed, sau đó upload file đó tại đây.</div>`;
+  }
+
+  const imgHtml = qrUploadedPreview
+    ? `<img src="${qrUploadedPreview}" alt="QR preview"/>`
+    : '';
+
+  return `${imgHtml}<div>
+    <div class="qr-decoded"><b>File:</b> ${escapeHtml(qrUploadedFile.name)}</div>
+    <div class="qr-decoded ${lastQrInput ? '' : 'empty'}" style="margin-top:6px"><b>QR value:</b> ${lastQrInput ? escapeHtml(lastQrInput) : 'chưa đọc được'}</div>
+  </div>`;
+}
+
+function renderQrResult(data) {
+  if (!data || !data.item) return '<div class="empty-state">Chưa có kết quả.</div>';
+  const item = data.item;
+  upsertItem(item);
+  if (data.request) upsertRemoveRequest(data.request);
+  const pos = data.position || item.placed_position || item.suggested_position || {};
+  const pending = data.request || data.pending_request || getPendingRemoveRequestForItem(item.item_id);
+  const effectiveStatus = pending ? 'outbound_pending' : (item.ui_status || item.display_status || item.status);
+  const statusLabel = statusBadgeClass(effectiveStatus);
+  return `
+    <div class="qr-result-card">
+      <div class="qr-result-title">Kết quả tìm hàng</div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+        <span class="mono" style="color:var(--accent2);font-size:13px;cursor:pointer" onclick="openDetail('${item.item_id}')">${item.item_id}</span>
+        <span class="badge ${statusLabel}">${effectiveStatus}</span>
+        ${pending ? '<span class="badge warning">outbound pending</span>' : ''}
+      </div>
+      <div class="kv-list">
+        <div class="kv"><span class="kv-k">QR Data</span><span class="kv-v mono">${escapeHtml(qrValueForItem(item))}</span></div>
+        <div class="kv"><span class="kv-k">Kệ</span><span class="kv-v mono">${pos.shelf_id || '—'}</span></div>
+        <div class="kv"><span class="kv-k">Tầng</span><span class="kv-v mono">${pos.level_id || '—'}</span></div>
+        <div class="kv"><span class="kv-k">Offset</span><span class="kv-v mono">${pos.x_offset_cm ?? pos.start_cm ?? 0} cm</span></div>
+        <div class="kv"><span class="kv-k">Size</span><span class="kv-v mono">${item.size_cm?.w}×${item.size_cm?.h}×${item.size_cm?.d} cm</span></div>
+        ${pending ? `<div class="kv"><span class="kv-k">Request</span><span class="kv-v mono">${pending.request_id}<br/>status=${pending.status}</span></div>` : ''}
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px">
+        <button class="btn btn-ghost btn-sm" onclick="downloadItemQr('${item.item_id}')">Tải QR</button>
+        <button class="btn btn-ghost btn-sm" onclick="openDetail('${item.item_id}')">Chi tiết</button>
+        ${pos.shelf_id ? `<button class="btn btn-ghost btn-sm" onclick="openShelfModal('${pos.shelf_id}')">Mở mô phỏng kệ</button>` : ''}
+        ${pending ? '<span class="badge warning">Đã gửi yêu cầu. Chờ Jetson xác nhận.</span>' : `<button class="btn btn-danger btn-sm" onclick="requestOutboundByQr()">Gửi outbound cho Jetson</button>`}
+      </div>
+    </div>
+  `;
+}
+
+async function readFileAsText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = reject;
+    reader.readAsText(file);
+  });
+}
+
+async function readFileAsDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function cleanQrItemIdFromAnyText(value) {
+  let text = String(value || '').trim();
+  try { text = decodeURIComponent(text); } catch(e) {}
+
+  text = text.replace(/^[\'"]|[\'"]$/g, '').trim();
+  text = text.split(/[?#]/)[0].trim();
+  text = text.replace(/^.*[\\/]/, '');
+  text = text.replace(/\.(png|jpg|jpeg|svg|webp)$/i, '');
+
+  const match = text.match(/ITEM_[A-Z0-9_\-]+/i);
+  if (!match) return '';
+
+  return match[0]
+    .replace(/(?:[_-]QR(?:[_-]CODE)?|[_-]QRCODE)$/i, '')
+    .toUpperCase();
+}
+
+function extractQrLikeText(text, preferQrPrefix=false) {
+  const raw = String(text || '');
+  const itemId = cleanQrItemIdFromAnyText(raw);
+  if (!itemId) return '';
+
+  // If the text truly contains WH:... or this is a downloaded QR filename fallback,
+  // return the logical QR value used by the system, not the filename label.
+  return (/WH:/i.test(raw) || preferQrPrefix) ? `WH:${itemId}` : itemId;
+}
+
+async function decodeQrWithBarcodeDetector(file) {
+  if (!('BarcodeDetector' in window)) return '';
+
+  try {
+    const detector = new BarcodeDetector({ formats: ['qr_code'] });
+    const bitmap = await createImageBitmap(file);
+    const codes = await detector.detect(bitmap);
+    if (codes && codes.length > 0) return codes[0].rawValue || '';
+  } catch (e) {
+    return '';
+  }
+
+  return '';
+}
+
+async function decodeQrFromUploadedFile(file) {
+  if (!file) return '';
+
+  // 1) If it is SVG, recover embedded QR metadata/text.
+  if (file.type.includes('svg') || file.name.toLowerCase().endsWith('.svg')) {
+    try {
+      const txt = await readFileAsText(file);
+      const fromSvg = extractQrLikeText(txt, true);
+      if (fromSvg) return fromSvg;
+    } catch (e) {}
+  }
+
+  // 2) Real QR scan in browser when BarcodeDetector is available.
+  const scanned = await decodeQrWithBarcodeDetector(file);
+  if (scanned) return scanned;
+
+  // 3) Fallback for QR files downloaded from this dashboard: filename contains ITEM_xxx.
+  const fromName = extractQrLikeText(file.name, true);
+  if (fromName) return fromName;
+
+  return '';
+}
+
+async function handleQrFileUpload(evt) {
+  const file = evt?.target?.files?.[0] || null;
+  qrUploadedFile = file;
+  qrLookupResult = null;
+  lastQrInput = '';
+  qrUploadedPreview = '';
+
+  const preview = document.getElementById('qr-upload-preview');
+  if (!file) {
+    if (preview) preview.innerHTML = renderQrUploadPreview();
+    return;
+  }
+
+  try {
+    qrUploadedPreview = await readFileAsDataURL(file);
+  } catch(e) {
+    qrUploadedPreview = '';
+  }
+
+  if (preview) preview.innerHTML = renderQrUploadPreview();
+
+  const decoded = await decodeQrFromUploadedFile(file);
+  if (decoded) {
+    lastQrInput = decoded;
+    if (preview) preview.innerHTML = renderQrUploadPreview();
+    toast(`✓ Đã đọc QR: ${decoded}`, 'success');
+  } else {
+    if (preview) preview.innerHTML = renderQrUploadPreview();
+    toast('Chưa đọc được QR. Hãy dùng file QR tải từ dashboard hoặc dùng Chrome có BarcodeDetector.', 'warn');
+  }
+}
+
+async function getUploadedQrValueForAction() {
+  if (lastQrInput) return lastQrInput;
+  if (!qrUploadedFile) {
+    toast('Upload file QR trước đã', 'warn');
+    return '';
+  }
+
+  const decoded = await decodeQrFromUploadedFile(qrUploadedFile);
+  if (decoded) {
+    lastQrInput = decoded;
+    const preview = document.getElementById('qr-upload-preview');
+    if (preview) preview.innerHTML = renderQrUploadPreview();
+    return decoded;
+  }
+
+  toast('Không đọc được QR từ file upload', 'danger');
+  return '';
+}
+
+async function lookupQrItem() {
+  const qrValue = await getUploadedQrValueForAction();
+  if (!qrValue) return;
+
+  try {
+    const r = await fetch(`${API}/api/qr/lookup`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ qr_data: qrValue }),
+    });
+    const d = await r.json();
+    if (!r.ok) { qrLookupResult = null; document.getElementById('qr-result').innerHTML = `<div class="empty-state">${escapeHtml(d.error || 'Không tìm thấy item')}</div>`; return; }
+    qrLookupResult = d;
+    if (d.pending_request) upsertRemoveRequest(d.pending_request);
+    if (d.item) upsertItem(d.item);
+    document.getElementById('qr-result').innerHTML = renderQrResult(d);
+    toast(`✓ Tìm thấy ${d.item.item_id}`, 'success');
+  } catch(e) {
+    toast('Lỗi kết nối server', 'danger');
+  }
+}
+
+async function requestOutboundByQr() {
+  const qrValue = await getUploadedQrValueForAction();
+  if (!qrValue) return;
+
+  try {
+    const r = await fetch(`${API}/api/qr/outbound-request`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ qr_data: qrValue, note: 'QR upload outbound request' }),
+    });
+    const d = await r.json();
+    if (!r.ok) { toast(`Lỗi: ${d.error}`, 'danger'); return; }
+    qrLookupResult = d;
+    if (d.request) upsertRemoveRequest(d.request);
+    if (d.item) upsertItem(d.item);
+    await fetchRemoveRequests();
+    document.getElementById('qr-result').innerHTML = renderQrResult(d);
+    toast(`✓ Đã gửi outbound request cho ${d.item.item_id}. Chờ Jetson highlight.`, 'success');
+  } catch(e) {
+    toast('Lỗi kết nối server', 'danger');
+  }
+}
+
+async function downloadItemQr(itemId) {
+  let item = allItems.find(i => i.item_id === itemId);
+  if (!item) {
+    try {
+      const r = await fetch(`${API}/api/items/${encodeURIComponent(itemId)}`);
+      const d = await r.json();
+      item = d.item;
+    } catch(e) {}
+  }
+  if (!item) { toast('Không tìm thấy item để tải QR', 'danger'); return; }
+  if (item.status !== 'placed') { toast('Chỉ tải QR cho item đang placed', 'warn'); return; }
+
+  try {
+    const r = await fetch(`${API}/api/items/${encodeURIComponent(itemId)}/qr.png`);
+    if (!r.ok) {
+      let msg = 'Không tải được QR';
+      try { const e = await r.json(); msg = e.error || msg; } catch(_) {}
+      toast(msg, 'danger');
+      return;
+    }
+
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${item.item_id}_QR.png`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    toast(`✓ Đã tải QR cho ${item.item_id}`, 'success');
+  } catch(e) {
+    toast('Không tải được QR từ backend', 'danger');
+  }
+}
+
 // ── Actions ─────────────────────────────────────────────────────────────────
 async function removeItem(itemId) {
   if (!confirm(`Xác nhận xuất kho item ${itemId}?`)) return;
   try {
     const r = await fetch(`${API}/api/items/${itemId}/remove-request`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ note: 'Dashboard export' }) });
     if (r.ok) {
-      toast(`✓ ${itemId} xuất kho thành công`, 'success');
+      const d = await r.json();
+      if (d.request) upsertRemoveRequest(d.request);
+      if (d.item) upsertItem(d.item);
+      toast(`✓ Đã gửi yêu cầu xuất kho ${itemId}. Chờ Jetson xác nhận.`, 'success');
       await fetchItems();
+      await fetchRemoveRequests();
       if (currentPage === 'items') renderItems();
       if (currentPage === 'detail') await renderDetail(itemId);
     } else {
@@ -1414,6 +1819,7 @@ function toast(msg, type='info') {
 (async () => {
   await fetchOverview();
   await fetchAlerts();
+  await fetchRemoveRequests();
   renderOverview();
 })();
 </script>
