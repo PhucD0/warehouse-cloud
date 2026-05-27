@@ -9,6 +9,7 @@ const mongoose = require('mongoose');
 const mqtt = require('mqtt');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const httpServer = http.createServer(app);
@@ -439,26 +440,42 @@ function pushEvent(evt) {
 }
 
 async function persistStateNow() {
-  if (!mongoEnabled || !StateModel) return;
   recomputeLevels();
-  await StateModel.findOneAndUpdate(
-    { key: 'warehouse' },
-    { key: 'warehouse', data: db, updated_at: new Date() },
-    { upsert: true, new: true }
-  );
+  if (mongoEnabled && StateModel) {
+    await StateModel.findOneAndUpdate(
+      { key: 'warehouse' },
+      { key: 'warehouse', data: db, updated_at: new Date() },
+      { upsert: true, new: true }
+    );
+  } else {
+    try {
+      fs.writeFileSync('warehouse-db.json', JSON.stringify(db, null, 2), 'utf8');
+    } catch (err) {
+      console.error('Local JSON save failed:', err.message);
+    }
+  }
 }
 
 function scheduleSave() {
-  if (!mongoEnabled) return;
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
-    persistStateNow().catch(err => console.error('MongoDB save failed:', err.message));
+    persistStateNow().catch(err => console.error('Save failed:', err.message));
   }, 200);
 }
 
 async function initMongo() {
   if (!MONGODB_URI) {
-    console.log('ℹ️  MONGODB_URI is not set. Running with in-memory storage.');
+    console.log('ℹ️  MONGODB_URI is not set. Running with local JSON storage.');
+    try {
+      if (fs.existsSync('warehouse-db.json')) {
+        const saved = JSON.parse(fs.readFileSync('warehouse-db.json', 'utf8'));
+        if (saved) db = saved;
+        ensureDefaultShelves(db);
+        console.log('📦 Loaded state from warehouse-db.json');
+      }
+    } catch (err) {
+      console.error('Failed to load local JSON storage:', err.message);
+    }
     return;
   }
 
@@ -495,6 +512,19 @@ async function initMongo() {
   } else {
     await persistStateNow();
     console.log('✅ Created initial warehouse state in MongoDB Atlas.');
+  }
+}
+
+async function syncFromDB() {
+  if (!mongoEnabled || !StateModel) return;
+  try {
+    const saved = await StateModel.findOne({ key: 'warehouse' }).lean();
+    if (saved?.data) {
+      db = saved.data;
+      ensureDefaultShelves(db);
+    }
+  } catch (err) {
+    console.error('Failed to sync from MongoDB:', err.message);
   }
 }
 
@@ -660,7 +690,8 @@ app.post('/api/events', async (req, res) => {
   res.status(201).json({ event: evt, storage: mongoEnabled ? 'mongodb_atlas' : 'in_memory' });
 });
 
-app.get('/api/items', (req, res) => {
+app.get('/api/items', async (req, res) => {
+  await syncFromDB();
   const { status, shelf_id } = req.query;
   let items = [...db.items];
   if (status) items = items.filter(i => i.status === status);
@@ -763,19 +794,25 @@ app.get('/api/remove-requests', (req, res) => {
   });
 });
 
-app.get('/api/shelves/:shelf_id/status', (req, res) => {
+app.get('/api/shelves/:shelf_id/status', async (req, res) => {
+  await syncFromDB();
   const status = shelfStatus(req.params.shelf_id);
   if (!status) return res.status(404).json({ error: 'Shelf not found' });
   res.json(status);
 });
 
-app.get('/api/alerts', (req, res) => {
+app.get('/api/alerts', async (req, res) => {
+  await syncFromDB();
   res.json({ alerts: db.alerts, total: db.alerts.length });
 });
 
-app.get('/api/overview', (req, res) => res.json(overviewStats()));
+app.get('/api/overview', async (req, res) => {
+  await syncFromDB();
+  res.json(overviewStats());
+});
 
-app.get('/api/events', (req, res) => {
+app.get('/api/events', async (req, res) => {
+  await syncFromDB();
   const limit = Number.parseInt(req.query.limit, 10) || 50;
   res.json({ events: db.events.slice(0, limit), total: db.events.length });
 });
@@ -818,7 +855,7 @@ async function start() {
     console.log(`\n🚀 Warehouse Cloud running on port ${PORT}`);
     console.log(`   Local:  http://localhost:${PORT}`);
     console.log(`   Public: use your hosting provider URL`);
-    console.log(`   Storage: ${mongoEnabled ? 'MongoDB Atlas' : 'In-memory'}\n`);
+    console.log(`   Storage: ${mongoEnabled ? 'MongoDB Atlas' : 'Local JSON'}\n`);
   });
 }
 
