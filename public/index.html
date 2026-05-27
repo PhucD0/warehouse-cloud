@@ -7,7 +7,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdn.socket.io/4.6.2/socket.io.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <style>
 /* ── Reset & Base ── */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -502,6 +501,12 @@ tr:hover td{background:rgba(0,0,0,.025)}
 .qr-search-grid{display:grid;grid-template-columns:minmax(280px,420px) 1fr;gap:16px;align-items:start}
 @media(max-width:900px){.qr-search-grid{grid-template-columns:1fr}}
 .qr-input-big{width:100%;font-size:14px;padding:12px 14px;font-family:var(--mono)}
+.qr-upload-box{border:1px dashed var(--border2);border-radius:var(--radius);background:var(--bg3);padding:16px;display:flex;flex-direction:column;gap:10px}
+.qr-file-input{width:100%;padding:12px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);font-family:var(--mono);font-size:12px}
+.qr-preview{display:flex;gap:12px;align-items:center;min-height:80px}
+.qr-preview img{max-width:120px;max-height:120px;border:1px solid var(--border);border-radius:4px;background:white;padding:4px}
+.qr-decoded{font-family:var(--mono);font-size:12px;color:var(--text);word-break:break-all}
+.qr-decoded.empty{color:var(--text3)}
 .qr-result-card{border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);padding:16px}
 .qr-result-title{font-size:13px;font-weight:600;margin-bottom:8px}
 .qr-help{font-size:11px;color:var(--text3);font-family:var(--mono);line-height:1.6}
@@ -639,6 +644,8 @@ let allRemoveRequests = [];
 let alertCount = 0;
 let qrLookupResult = null;
 let lastQrInput = "";
+let qrUploadedFile = null;
+let qrUploadedPreview = "";
 
 const PAGE_META = {
   overview: { title: 'Tổng quan', sub: 'Warehouse overview dashboard' },
@@ -1323,8 +1330,9 @@ async function renderDetail(itemId) {
     const pos = item.placed_position || item.suggested_position;
     const statusLabel = { placed:'placed', removed:'removed', waiting_for_placement:'waiting', missing_suspected:'missing', unknown_object:'unknown' }[item.status] || 'unknown';
 
-    // Draw a simple QR-like pattern
-    const qrPat = genQRPattern(item.item_id);
+    const qrVisual = item.status === 'placed'
+      ? `<img src="${API}/api/items/${encodeURIComponent(item.item_id)}/qr.svg" alt="QR ${item.item_id}" style="width:120px;height:120px;background:white;border-radius:4px" onerror="this.replaceWith(document.createTextNode('QR chưa sẵn sàng'))"/>`
+      : genQRPattern(item.item_id);
 
     const evtHtml = events.length === 0 ? '<div style="padding:16px;color:var(--text3);font-size:12px">Không có events</div>'
       : events.map(e => {
@@ -1350,7 +1358,7 @@ async function renderDetail(itemId) {
         <div>
           <div class="qr-box mb-16">
             <div style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-bottom:8px">QR Code</div>
-            <div class="qr-visual">${qrPat}</div>
+            <div class="qr-visual">${qrVisual}</div>
             <div style="font-size:10px;font-family:var(--mono);color:var(--text2);text-align:center">${item.qr_data}</div>
             <button class="btn btn-ghost btn-sm" onclick="downloadItemQr('${item.item_id}')">Tải mã QR</button>
             <div style="font-size:9px;color:var(--text3);font-family:var(--mono)">${item.qr_path}</div>
@@ -1395,26 +1403,47 @@ function renderQrSearch() {
   document.getElementById('content').innerHTML = `
     <div class="qr-search-grid">
       <div class="card">
-        <div class="sec-title" style="margin-bottom:12px">Nhập mã QR / Item ID</div>
-        <input id="qr-input" class="qr-input-big" placeholder="Ví dụ: WH:ITEM_ABC123 hoặc ITEM_ABC123" value="${escapeHtml(lastQrInput)}" onkeydown="if(event.key==='Enter') lookupQrItem()"/>
+        <div class="sec-title" style="margin-bottom:12px">Upload mã QR đã tải từ hệ thống</div>
+        <div class="qr-upload-box">
+          <input id="qr-file-input" class="qr-file-input" type="file" accept="image/*,.svg" onchange="handleQrFileUpload(event)"/>
+          <div id="qr-upload-preview" class="qr-preview">
+            ${renderQrUploadPreview()}
+          </div>
+        </div>
         <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
-          <button class="btn btn-primary" onclick="lookupQrItem()">Tìm vị trí</button>
-          <button class="btn btn-danger" onclick="requestOutboundByQr()">Tìm & gửi outbound</button>
+          <button class="btn btn-primary" onclick="lookupQrItem()">Quét QR & tìm vị trí</button>
+          <button class="btn btn-danger" onclick="requestOutboundByQr()">Quét QR & gửi outbound</button>
         </div>
         <div class="qr-help" style="margin-top:14px">
-          Hệ thống chỉ cho tìm và gửi outbound với item có trạng thái <b>placed</b>.<br/>
-          Khi gửi outbound, backend tạo remove_request pending. Jetson sẽ poll request này và highlight vùng REMOVE giống nút Xuất trong Quản lý hàng.
+          Input chính là <b>file QR</b> tải từ dashboard, không nhập mã hàng thủ công.<br/>
+          Dashboard sẽ đọc nội dung QR, tìm item có trạng thái <b>placed</b>, sau đó có thể tạo remove_request pending để Jetson highlight vùng REMOVE.
         </div>
         <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
           <span class="badge placed">${placedCount} placed</span>
           <span class="badge warning">${pendingCount} pending outbound</span>
+          ${lastQrInput ? `<span class="badge ok">QR=${escapeHtml(lastQrInput)}</span>` : ''}
         </div>
       </div>
       <div id="qr-result">
-        ${qrLookupResult ? renderQrResult(qrLookupResult) : '<div class="empty-state">Nhập QR để tìm vị trí hàng trên kệ.</div>'}
+        ${qrLookupResult ? renderQrResult(qrLookupResult) : '<div class="empty-state">Upload file QR để tìm vị trí hàng trên kệ.</div>'}
       </div>
     </div>
   `;
+}
+
+function renderQrUploadPreview() {
+  if (!qrUploadedFile) {
+    return `<div class="qr-decoded empty">Chưa chọn file QR. Hãy dùng nút “Tải QR” ở item placed, sau đó upload file đó tại đây.</div>`;
+  }
+
+  const imgHtml = qrUploadedPreview
+    ? `<img src="${qrUploadedPreview}" alt="QR preview"/>`
+    : '';
+
+  return `${imgHtml}<div>
+    <div class="qr-decoded"><b>File:</b> ${escapeHtml(qrUploadedFile.name)}</div>
+    <div class="qr-decoded ${lastQrInput ? '' : 'empty'}" style="margin-top:6px"><b>QR decoded:</b> ${lastQrInput ? escapeHtml(lastQrInput) : 'chưa đọc được'}</div>
+  </div>`;
 }
 
 function renderQrResult(data) {
@@ -1448,16 +1477,131 @@ function renderQrResult(data) {
   `;
 }
 
+async function readFileAsText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = reject;
+    reader.readAsText(file);
+  });
+}
+
+async function readFileAsDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function extractQrLikeText(text) {
+  const s = String(text || '');
+  const wh = s.match(/WH:ITEM_[A-Z0-9_\-]+/i);
+  if (wh) return wh[0];
+  const item = s.match(/ITEM_[A-Z0-9_\-]+/i);
+  if (item) return item[0];
+  return '';
+}
+
+async function decodeQrWithBarcodeDetector(file) {
+  if (!('BarcodeDetector' in window)) return '';
+
+  try {
+    const detector = new BarcodeDetector({ formats: ['qr_code'] });
+    const bitmap = await createImageBitmap(file);
+    const codes = await detector.detect(bitmap);
+    if (codes && codes.length > 0) return codes[0].rawValue || '';
+  } catch (e) {
+    return '';
+  }
+
+  return '';
+}
+
+async function decodeQrFromUploadedFile(file) {
+  if (!file) return '';
+
+  // 1) If it is SVG, recover embedded QR metadata/text.
+  if (file.type.includes('svg') || file.name.toLowerCase().endsWith('.svg')) {
+    try {
+      const txt = await readFileAsText(file);
+      const fromSvg = extractQrLikeText(txt);
+      if (fromSvg) return fromSvg;
+    } catch (e) {}
+  }
+
+  // 2) Real QR scan in browser when BarcodeDetector is available.
+  const scanned = await decodeQrWithBarcodeDetector(file);
+  if (scanned) return scanned;
+
+  // 3) Fallback for QR files downloaded from this dashboard: filename contains ITEM_xxx.
+  const fromName = extractQrLikeText(file.name);
+  if (fromName) return fromName;
+
+  return '';
+}
+
+async function handleQrFileUpload(evt) {
+  const file = evt?.target?.files?.[0] || null;
+  qrUploadedFile = file;
+  qrLookupResult = null;
+  lastQrInput = '';
+  qrUploadedPreview = '';
+
+  const preview = document.getElementById('qr-upload-preview');
+  if (!file) {
+    if (preview) preview.innerHTML = renderQrUploadPreview();
+    return;
+  }
+
+  try {
+    qrUploadedPreview = await readFileAsDataURL(file);
+  } catch(e) {
+    qrUploadedPreview = '';
+  }
+
+  if (preview) preview.innerHTML = renderQrUploadPreview();
+
+  const decoded = await decodeQrFromUploadedFile(file);
+  if (decoded) {
+    lastQrInput = decoded;
+    if (preview) preview.innerHTML = renderQrUploadPreview();
+    toast(`✓ Đã đọc QR: ${decoded}`, 'success');
+  } else {
+    if (preview) preview.innerHTML = renderQrUploadPreview();
+    toast('Chưa đọc được QR. Hãy dùng file QR tải từ dashboard hoặc dùng Chrome có BarcodeDetector.', 'warn');
+  }
+}
+
+async function getUploadedQrValueForAction() {
+  if (lastQrInput) return lastQrInput;
+  if (!qrUploadedFile) {
+    toast('Upload file QR trước đã', 'warn');
+    return '';
+  }
+
+  const decoded = await decodeQrFromUploadedFile(qrUploadedFile);
+  if (decoded) {
+    lastQrInput = decoded;
+    const preview = document.getElementById('qr-upload-preview');
+    if (preview) preview.innerHTML = renderQrUploadPreview();
+    return decoded;
+  }
+
+  toast('Không đọc được QR từ file upload', 'danger');
+  return '';
+}
+
 async function lookupQrItem() {
-  const input = document.getElementById('qr-input');
-  lastQrInput = input ? input.value.trim() : lastQrInput;
-  if (!lastQrInput) { toast('Nhập mã QR trước đã', 'warn'); return; }
+  const qrValue = await getUploadedQrValueForAction();
+  if (!qrValue) return;
 
   try {
     const r = await fetch(`${API}/api/qr/lookup`, {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ qr_data: lastQrInput }),
+      body: JSON.stringify({ qr_data: qrValue }),
     });
     const d = await r.json();
     if (!r.ok) { qrLookupResult = null; document.getElementById('qr-result').innerHTML = `<div class="empty-state">${escapeHtml(d.error || 'Không tìm thấy item')}</div>`; return; }
@@ -1470,15 +1614,14 @@ async function lookupQrItem() {
 }
 
 async function requestOutboundByQr() {
-  const input = document.getElementById('qr-input');
-  lastQrInput = input ? input.value.trim() : lastQrInput;
-  if (!lastQrInput) { toast('Nhập mã QR trước đã', 'warn'); return; }
+  const qrValue = await getUploadedQrValueForAction();
+  if (!qrValue) return;
 
   try {
     const r = await fetch(`${API}/api/qr/outbound-request`, {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ qr_data: lastQrInput, note: 'QR search outbound request' }),
+      body: JSON.stringify({ qr_data: qrValue, note: 'QR upload outbound request' }),
     });
     const d = await r.json();
     if (!r.ok) { toast(`Lỗi: ${d.error}`, 'danger'); return; }
@@ -1495,7 +1638,7 @@ async function downloadItemQr(itemId) {
   let item = allItems.find(i => i.item_id === itemId);
   if (!item) {
     try {
-      const r = await fetch(`${API}/api/items/${itemId}`);
+      const r = await fetch(`${API}/api/items/${encodeURIComponent(itemId)}`);
       const d = await r.json();
       item = d.item;
     } catch(e) {}
@@ -1503,28 +1646,27 @@ async function downloadItemQr(itemId) {
   if (!item) { toast('Không tìm thấy item để tải QR', 'danger'); return; }
   if (item.status !== 'placed') { toast('Chỉ tải QR cho item đang placed', 'warn'); return; }
 
-  const value = qrValueForItem(item);
-  if (!window.QRCode || !QRCode.toDataURL) {
-    toast('Thư viện tạo QR chưa tải được. Kiểm tra Internet/CDN.', 'danger');
-    return;
-  }
-
   try {
-    const dataUrl = await QRCode.toDataURL(value, {
-      width: 512,
-      margin: 2,
-      errorCorrectionLevel: 'M',
-      color: { dark: '#000000', light: '#ffffff' },
-    });
+    const r = await fetch(`${API}/api/items/${encodeURIComponent(itemId)}/qr.png`);
+    if (!r.ok) {
+      let msg = 'Không tải được QR';
+      try { const e = await r.json(); msg = e.error || msg; } catch(_) {}
+      toast(msg, 'danger');
+      return;
+    }
+
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = dataUrl;
+    a.href = url;
     a.download = `${item.item_id}_QR.png`;
     document.body.appendChild(a);
     a.click();
     a.remove();
+    URL.revokeObjectURL(url);
     toast(`✓ Đã tải QR cho ${item.item_id}`, 'success');
   } catch(e) {
-    toast('Không tạo được QR để tải', 'danger');
+    toast('Không tải được QR từ backend', 'danger');
   }
 }
 

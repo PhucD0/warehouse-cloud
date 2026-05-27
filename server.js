@@ -11,6 +11,14 @@ const { v4: uuidv4 } = require('uuid');
 const path = require('path');
 const fs = require('fs');
 
+let QRCodeLib = null;
+try {
+  QRCodeLib = require('qrcode');
+} catch (_) {
+  QRCodeLib = null;
+}
+
+
 const app = express();
 const httpServer = http.createServer(app);
 const io = new Server(httpServer, {
@@ -832,6 +840,94 @@ app.get('/api/items/:item_id', (req, res) => {
   if (!item) return res.status(404).json({ error: 'Item not found' });
   res.json({ item, events: getItemHistory(item.item_id) });
 });
+
+function findItemByIdParam(itemId) {
+  return db.items.find(i => String(i.item_id) === String(itemId));
+}
+
+function qrValueForItemServer(item) {
+  return item?.qr_data || `WH:${item?.item_id || ''}`;
+}
+
+function qrDownloadBaseName(item) {
+  return String(item?.item_id || 'warehouse_item').replace(/[^A-Za-z0-9_-]/g, '_');
+}
+
+async function generateQrPngBuffer(value) {
+  if (!QRCodeLib) {
+    const err = new Error('QR generation package is missing. Run: npm install qrcode --save');
+    err.statusCode = 503;
+    throw err;
+  }
+  return QRCodeLib.toBuffer(value, {
+    type: 'png',
+    width: 512,
+    margin: 2,
+    errorCorrectionLevel: 'M',
+    color: { dark: '#000000', light: '#ffffff' },
+  });
+}
+
+async function generateQrSvgString(value, item) {
+  if (!QRCodeLib) {
+    const err = new Error('QR generation package is missing. Run: npm install qrcode --save');
+    err.statusCode = 503;
+    throw err;
+  }
+  const svg = await QRCodeLib.toString(value, {
+    type: 'svg',
+    margin: 2,
+    errorCorrectionLevel: 'M',
+    color: { dark: '#000000', light: '#ffffff' },
+  });
+
+  // Metadata helps the dashboard recover the QR value if a downloaded SVG is uploaded back.
+  return svg.replace(
+    '<svg ',
+    `<svg data-qr="${String(value).replace(/&/g, '&amp;').replace(/"/g, '&quot;')}" data-item-id="${String(item.item_id).replace(/&/g, '&amp;').replace(/"/g, '&quot;')}" `
+  );
+}
+
+app.get('/api/items/:item_id/qr.png', async (req, res) => {
+  await syncFromDB();
+  const item = findItemByIdParam(req.params.item_id);
+  if (!item) return res.status(404).json({ error: 'Item not found' });
+  if (item.status !== 'placed') {
+    return res.status(400).json({ error: `QR download is only available for placed items. Current status: ${item.status}` });
+  }
+
+  try {
+    const value = qrValueForItemServer(item);
+    const buffer = await generateQrPngBuffer(value);
+    const base = qrDownloadBaseName(item);
+    res.setHeader('Content-Type', 'image/png');
+    res.setHeader('Content-Disposition', `attachment; filename="${base}_QR.png"`);
+    res.setHeader('Cache-Control', 'no-store');
+    res.send(buffer);
+  } catch (err) {
+    res.status(err.statusCode || 500).json({ error: err.message || 'QR generation failed' });
+  }
+});
+
+app.get('/api/items/:item_id/qr.svg', async (req, res) => {
+  await syncFromDB();
+  const item = findItemByIdParam(req.params.item_id);
+  if (!item) return res.status(404).json({ error: 'Item not found' });
+  if (item.status !== 'placed') {
+    return res.status(400).json({ error: `QR display is only available for placed items. Current status: ${item.status}` });
+  }
+
+  try {
+    const value = qrValueForItemServer(item);
+    const svg = await generateQrSvgString(value, item);
+    res.setHeader('Content-Type', 'image/svg+xml; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-store');
+    res.send(svg);
+  } catch (err) {
+    res.status(err.statusCode || 500).json({ error: err.message || 'QR generation failed' });
+  }
+});
+
 
 app.post('/api/items/:item_id/remove-request', async (req, res) => {
   const item = db.items.find(i => i.item_id === req.params.item_id);
