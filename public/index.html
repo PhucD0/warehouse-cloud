@@ -759,12 +759,21 @@ function getPendingRemoveRequestForItem(itemId) {
 function normalizeQrClient(value) {
   let text = String(value || '').trim();
   try { text = decodeURIComponent(text); } catch(e) {}
+
   const urlMatch = text.match(/(?:qr|item|code|id)=([^&\s]+)/i);
   if (urlMatch) {
     text = urlMatch[1];
     try { text = decodeURIComponent(text); } catch(e) {}
   }
-  return text.replace(/^['"]|['"]$/g, '').replace(/^WH:/i, '').trim().toUpperCase();
+
+  text = text.replace(/^[\'"]|[\'"]$/g, '').trim();
+  text = text.split(/[?#]/)[0].trim();
+  text = text.replace(/^.*[\\/]/, '');
+  text = text.replace(/\.(png|jpg|jpeg|svg|webp)$/i, '');
+  text = text.replace(/^WH:/i, '').trim();
+  text = text.replace(/(?:[_-]QR(?:[_-]CODE)?|[_-]QRCODE)$/i, '').trim();
+
+  return text.toUpperCase();
 }
 
 function escapeHtml(v) {
@@ -1442,7 +1451,7 @@ function renderQrUploadPreview() {
 
   return `${imgHtml}<div>
     <div class="qr-decoded"><b>File:</b> ${escapeHtml(qrUploadedFile.name)}</div>
-    <div class="qr-decoded ${lastQrInput ? '' : 'empty'}" style="margin-top:6px"><b>QR decoded:</b> ${lastQrInput ? escapeHtml(lastQrInput) : 'chưa đọc được'}</div>
+    <div class="qr-decoded ${lastQrInput ? '' : 'empty'}" style="margin-top:6px"><b>QR value:</b> ${lastQrInput ? escapeHtml(lastQrInput) : 'chưa đọc được'}</div>
   </div>`;
 }
 
@@ -1495,13 +1504,31 @@ async function readFileAsDataURL(file) {
   });
 }
 
-function extractQrLikeText(text) {
-  const s = String(text || '');
-  const wh = s.match(/WH:ITEM_[A-Z0-9_\-]+/i);
-  if (wh) return wh[0];
-  const item = s.match(/ITEM_[A-Z0-9_\-]+/i);
-  if (item) return item[0];
-  return '';
+function cleanQrItemIdFromAnyText(value) {
+  let text = String(value || '').trim();
+  try { text = decodeURIComponent(text); } catch(e) {}
+
+  text = text.replace(/^[\'"]|[\'"]$/g, '').trim();
+  text = text.split(/[?#]/)[0].trim();
+  text = text.replace(/^.*[\\/]/, '');
+  text = text.replace(/\.(png|jpg|jpeg|svg|webp)$/i, '');
+
+  const match = text.match(/ITEM_[A-Z0-9_\-]+/i);
+  if (!match) return '';
+
+  return match[0]
+    .replace(/(?:[_-]QR(?:[_-]CODE)?|[_-]QRCODE)$/i, '')
+    .toUpperCase();
+}
+
+function extractQrLikeText(text, preferQrPrefix=false) {
+  const raw = String(text || '');
+  const itemId = cleanQrItemIdFromAnyText(raw);
+  if (!itemId) return '';
+
+  // If the text truly contains WH:... or this is a downloaded QR filename fallback,
+  // return the logical QR value used by the system, not the filename label.
+  return (/WH:/i.test(raw) || preferQrPrefix) ? `WH:${itemId}` : itemId;
 }
 
 async function decodeQrWithBarcodeDetector(file) {
@@ -1526,7 +1553,7 @@ async function decodeQrFromUploadedFile(file) {
   if (file.type.includes('svg') || file.name.toLowerCase().endsWith('.svg')) {
     try {
       const txt = await readFileAsText(file);
-      const fromSvg = extractQrLikeText(txt);
+      const fromSvg = extractQrLikeText(txt, true);
       if (fromSvg) return fromSvg;
     } catch (e) {}
   }
@@ -1536,7 +1563,7 @@ async function decodeQrFromUploadedFile(file) {
   if (scanned) return scanned;
 
   // 3) Fallback for QR files downloaded from this dashboard: filename contains ITEM_xxx.
-  const fromName = extractQrLikeText(file.name);
+  const fromName = extractQrLikeText(file.name, true);
   if (fromName) return fromName;
 
   return '';

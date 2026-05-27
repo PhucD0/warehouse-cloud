@@ -447,15 +447,27 @@ function normalizeQrLookupText(value) {
   let text = String(value || '').trim();
   try { text = decodeURIComponent(text); } catch (_) {}
 
-  // Accept raw item_id, WH:ITEM_ID, quoted values, or a pasted URL that contains the QR value.
-  text = text.replace(/^['"]|['"]$/g, '').trim();
+  // Accept raw item_id, WH:ITEM_ID, quoted values, URLs, or downloaded filenames.
+  text = text.replace(/^[\'"]|[\'"]$/g, '').trim();
+
   const urlMatch = text.match(/(?:qr|item|code|id)=([^&\s]+)/i);
   if (urlMatch) {
     text = urlMatch[1];
     try { text = decodeURIComponent(text); } catch (_) {}
   }
 
+  // If a whole path or filename is submitted, keep the basename only.
+  text = text.split(/[?#]/)[0].trim();
+  text = text.replace(/^.*[\\/]/, '');
+  text = text.replace(/\.(png|jpg|jpeg|svg|webp)$/i, '');
+
+  // Backend stores QR as WH:ITEM_xxx, but lookup should compare by item_id.
   text = text.replace(/^WH:/i, '').trim();
+
+  // Dashboard-downloaded files are named ITEM_xxx_QR.png.
+  // The _QR suffix is a filename label, not part of the item_id.
+  text = text.replace(/(?:[_-]QR(?:[_-]CODE)?|[_-]QRCODE)$/i, '').trim();
+
   return text.toUpperCase();
 }
 
