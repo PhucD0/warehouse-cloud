@@ -47,14 +47,20 @@ let mqttReady = false;
 let db = createInitialState();
 
 function createInitialState() {
+  // Define all shelves in the warehouse
+  const SHELF_DEFS = [
+    { shelf_id: DEFAULT_SHELF_ID, label: 'Kệ A' },
+    { shelf_id: 'SHELF_B',        label: 'Kệ B' },
+    { shelf_id: 'SHELF_C',        label: 'Kệ C' },
+    { shelf_id: 'SHELF_D',        label: 'Kệ D' },
+  ];
+
   const state = {
-    shelves: [
-      {
-        shelf_id: DEFAULT_SHELF_ID,
-        label: 'Kệ A',
-        physical_size_cm: { w: SHELF_W, h: SHELF_H * 4, d: SHELF_D },
-      },
-    ],
+    shelves: SHELF_DEFS.map(s => ({
+      shelf_id: s.shelf_id,
+      label: s.label,
+      physical_size_cm: { w: SHELF_W, h: SHELF_H * 4, d: SHELF_D },
+    })),
     levels: [],
     items: [],
     events: [],
@@ -62,17 +68,19 @@ function createInitialState() {
     remove_requests: [],
   };
 
-  for (let n = 1; n <= 4; n++) {
-    state.levels.push({
-      level_id: `T${n}`,
-      shelf_id: DEFAULT_SHELF_ID,
-      level_num: n,
-      expected_count: 0,
-      detected_count: 0,
-      capacity_cm: SHELF_W,
-      used_cm: 0,
-      status: 'ok',
-    });
+  for (const sh of SHELF_DEFS) {
+    for (let n = 1; n <= 4; n++) {
+      state.levels.push({
+        level_id: `T${n}`,
+        shelf_id: sh.shelf_id,
+        level_num: n,
+        expected_count: 0,
+        detected_count: 0,
+        capacity_cm: SHELF_W,
+        used_cm: 0,
+        status: 'ok',
+      });
+    }
   }
 
   if (SEED_DEMO_DATA) seedDemoData(state);

@@ -283,16 +283,221 @@ tr:hover td{background:rgba(255,255,255,.015)}
 .mb-24{margin-bottom:24px}
 .empty-state{padding:40px;text-align:center;color:var(--text3);font-size:13px;border:1px dashed var(--border);border-radius:var(--radius)}
 
+/* ── Warehouse Map ── */
+.warehouse-map{
+  display:flex;gap:40px;flex-wrap:wrap;
+  padding:24px;background:var(--bg2);
+  border:1px solid var(--border);border-radius:var(--radius);
+  margin-bottom:24px;
+}
+.zone-block{display:flex;flex-direction:column;gap:10px}
+.zone-label{
+  font-size:11px;font-family:var(--mono);font-weight:600;
+  letter-spacing:.1em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:4px;
+}
+.zone-rows{display:flex;flex-direction:column;gap:10px}
+.zone-row{display:flex;gap:10px}
+.map-shelf{
+  width:72px;height:110px;
+  border:2px dashed #2d7a4f;
+  border-radius:5px;
+  background:rgba(16,185,129,.08);
+  cursor:pointer;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:4px;
+  transition:all .18s;
+  position:relative;
+}
+.map-shelf:hover{
+  background:rgba(16,185,129,.18);
+  border-color:#10b981;
+  transform:translateY(-2px);
+  box-shadow:0 4px 16px rgba(16,185,129,.2);
+}
+.map-shelf.suggested{
+  border-color:#ef4444;
+  background:rgba(239,68,68,.12);
+  animation:shelf-pulse 1.8s ease-in-out infinite;
+}
+.map-shelf.suggested:hover{
+  background:rgba(239,68,68,.22);
+  border-color:#f87171;
+  box-shadow:0 4px 16px rgba(239,68,68,.25);
+}
+@keyframes shelf-pulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,0)}
+  50%{box-shadow:0 0 0 6px rgba(239,68,68,.15)}
+}
+.map-shelf-label{
+  font-size:10px;font-family:var(--mono);
+  font-weight:600;color:var(--text2);
+}
+.map-shelf.suggested .map-shelf-label{color:#ef4444}
+.map-shelf-sub{font-size:9px;color:var(--text3);font-family:var(--mono)}
+.map-shelf-badge{
+  position:absolute;top:4px;right:4px;
+  background:#ef4444;color:#fff;
+  font-size:8px;font-family:var(--mono);
+  padding:1px 4px;border-radius:4px;font-weight:700;
+}
+.map-shelf-items-dot{
+  display:flex;gap:2px;flex-wrap:wrap;justify-content:center;
+  max-width:52px;
+}
+.items-dot{
+  width:7px;height:7px;border-radius:1px;
+  background:rgba(16,185,129,.5);
+}
+
+/* ── Shelf Detail Modal ── */
+#shelf-modal-overlay{
+  position:fixed;inset:0;
+  background:rgba(0,0,0,.7);backdrop-filter:blur(4px);
+  z-index:1000;display:flex;align-items:center;justify-content:center;
+  opacity:0;pointer-events:none;transition:opacity .2s;
+}
+#shelf-modal-overlay.open{opacity:1;pointer-events:all}
+#shelf-modal{
+  background:var(--bg2);border:1px solid var(--border2);
+  border-radius:10px;padding:28px;
+  min-width:560px;max-width:90vw;max-height:85vh;
+  overflow-y:auto;
+  box-shadow:0 24px 60px rgba(0,0,0,.6);
+  transform:translateY(16px);transition:transform .2s;
+}
+#shelf-modal-overlay.open #shelf-modal{transform:none}
+.modal-head{
+  display:flex;justify-content:space-between;align-items:flex-start;
+  margin-bottom:20px;
+}
+.modal-title{font-size:16px;font-weight:600}
+.modal-sub{font-size:11px;color:var(--text3);font-family:var(--mono);margin-top:3px}
+.modal-close{
+  background:transparent;border:1px solid var(--border);
+  color:var(--text2);border-radius:var(--radius);
+  padding:4px 10px;font-size:13px;cursor:pointer;
+  transition:all .15s;
+}
+.modal-close:hover{border-color:var(--danger);color:var(--danger)}
+
+/* ── 3D Shelf simulator ── */
+.shelf-3d{
+  border:2px solid var(--border2);
+  border-radius:8px;overflow:hidden;
+  background:var(--bg3);
+}
+.shelf-3d-header{
+  background:var(--bg4);border-bottom:1px solid var(--border);
+  padding:8px 14px;display:flex;justify-content:space-between;
+  font-size:10px;font-family:var(--mono);color:var(--text3);
+}
+.shelf-level-row{
+  display:flex;align-items:stretch;
+  border-bottom:1px solid var(--border);
+  min-height:70px;
+}
+.shelf-level-row:last-child{border-bottom:none}
+.shelf-level-label{
+  width:52px;min-width:52px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:10px;font-family:var(--mono);color:var(--text3);
+  background:var(--bg4);border-right:1px solid var(--border);
+  flex-direction:column;gap:3px;
+}
+.shelf-level-content{
+  flex:1;position:relative;
+  min-height:70px;
+  background:repeating-linear-gradient(
+    90deg,
+    transparent,
+    transparent 9px,
+    rgba(255,255,255,.015) 9px,
+    rgba(255,255,255,.015) 10px
+  );
+}
+.shelf-floor{
+  position:absolute;bottom:0;left:0;right:0;
+  height:3px;background:var(--border2);
+}
+.shelf-item-box{
+  position:absolute;bottom:3px;
+  border-radius:3px 3px 0 0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:8px;font-family:var(--mono);
+  transition:all .15s;cursor:pointer;
+  overflow:hidden;
+}
+.shelf-item-box:hover{filter:brightness(1.2);z-index:2}
+.shelf-item-box .item-label{
+  writing-mode:vertical-rl;
+  text-orientation:mixed;
+  transform:rotate(180deg);
+  font-size:8px;opacity:.8;
+  max-height:100%;overflow:hidden;
+  white-space:nowrap;text-overflow:ellipsis;
+}
+.shelf-item-suggested{
+  position:absolute;bottom:3px;
+  border:2px dashed #ef4444;
+  border-radius:3px 3px 0 0;
+  background:rgba(239,68,68,.07);
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:2px;
+  animation:dash-anim 1s linear infinite;
+}
+@keyframes dash-anim{
+  to{stroke-dashoffset:-8}
+}
+.suggested-icon{
+  font-size:14px;line-height:1;
+}
+.suggested-label{
+  font-size:7px;font-family:var(--mono);
+  color:#ef4444;text-align:center;padding:0 2px;
+}
+.shelf-legend{
+  display:flex;gap:16px;flex-wrap:wrap;
+  margin-top:16px;padding:12px 14px;
+  background:var(--bg3);border:1px solid var(--border);
+  border-radius:var(--radius);
+  font-size:10px;font-family:var(--mono);color:var(--text3);
+}
+.legend-item{display:flex;align-items:center;gap:6px}
+.legend-box{
+  width:16px;height:12px;border-radius:2px;
+}
+.legend-dashed{
+  width:16px;height:12px;border-radius:2px;
+  border:2px dashed #ef4444;
+  background:rgba(239,68,68,.07);
+}
+
 /* ── Responsive ── */
 @media(max-width:600px){
   :root{--sidebar:0px}
   #sidebar{display:none}
   #content{padding:16px}
+  #shelf-modal{min-width:95vw;padding:16px}
 }
 </style>
 </head>
 <body>
 <div id="toast-container"></div>
+
+<!-- Shelf Detail Modal -->
+<div id="shelf-modal-overlay" onclick="closeShelfModal(event)">
+  <div id="shelf-modal">
+    <div class="modal-head">
+      <div>
+        <div class="modal-title" id="modal-shelf-title">Chi tiết kệ</div>
+        <div class="modal-sub" id="modal-shelf-sub"></div>
+      </div>
+      <button class="modal-close" onclick="closeShelfModal()">✕ Đóng</button>
+    </div>
+    <div id="modal-shelf-body"></div>
+  </div>
+</div>
 <div id="layout">
   <!-- Sidebar -->
   <aside id="sidebar">
@@ -452,7 +657,7 @@ async function loadPage() {
   const c = document.getElementById('content');
   switch (currentPage) {
     case 'overview': await fetchOverview(); renderOverview(); break;
-    case 'shelves':  await fetchOverview(); renderShelves(); break;
+    case 'shelves':  await fetchOverview(); await fetchItems(); renderShelves(); break;
     case 'items':    await fetchItems(); renderItems(); break;
     case 'alerts':   await fetchAlerts(); renderAlerts(); break;
     case 'events':   await fetchEvents(); renderEvents(); break;
@@ -565,6 +770,108 @@ function renderShelves() {
   const d = overviewData;
   if (!d) { document.getElementById('content').innerHTML = '<div class="empty-state">Đang tải...</div>'; return; }
 
+  // Build list of waiting items to find suggested shelves
+  const waitingItems = allItems.filter(i => i.status === 'waiting_for_placement' && i.suggested_position);
+
+  document.getElementById('content').innerHTML = `
+    <div class="sec-head mb-16">
+      <span class="sec-title">Sơ đồ kho — ${(d.shelves||[]).length} kệ · ${overviewData.placed||0} items đang trên kệ · ${waitingItems.length} chờ xếp</span>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span style="display:flex;align-items:center;gap:5px;font-size:10px;font-family:var(--mono);color:#ef4444">
+          <span style="width:12px;height:12px;border:2px dashed #ef4444;border-radius:2px;display:inline-block"></span>Kệ gợi ý
+        </span>
+        <span style="display:flex;align-items:center;gap:5px;font-size:10px;font-family:var(--mono);color:var(--success)">
+          <span style="width:12px;height:12px;border:2px dashed #2d7a4f;border-radius:2px;background:rgba(16,185,129,.1);display:inline-block"></span>Kệ bình thường
+        </span>
+      </div>
+    </div>
+    <div id="wh-map-container"></div>
+    <div class="sec-head" style="margin-top:24px;margin-bottom:14px">
+      <span class="sec-title">Chi tiết từng kệ</span>
+      <span style="font-size:10px;color:var(--text3);font-family:var(--mono)">T4 = tầng cao nhất</span>
+    </div>
+    <div class="shelf-grid" id="shelf-detail-grid"></div>
+  `;
+
+  renderWarehouseMap(d, waitingItems);
+  renderShelfDetailGrid(d, waitingItems);
+}
+
+// Group shelves into zones of 2 (A+B → KHU A, C+D → KHU B, ...)
+function getZoneLabel(shelfId) {
+  const id = String(shelfId).toUpperCase();
+  // Extract trailing letter: A→0, B→1, C→2, D→3, ...
+  const m = id.match(/([A-Z])$/);
+  if (m) {
+    const idx = m[1].charCodeAt(0) - 65; // A=0, B=1, C=2, D=3
+    const zoneIdx = Math.floor(idx / 2);  // pair: 0+1→zone0, 2+3→zone1
+    const zoneChar = String.fromCharCode(65 + zoneIdx); // 0→A, 1→B
+    return 'KHU ' + zoneChar;
+  }
+  return 'KHU ' + shelfId;
+}
+
+function renderWarehouseMap(d, waitingItems) {
+  const suggestedShelfIds = new Set(
+    waitingItems.map(i => i.suggested_position?.shelf_id).filter(Boolean)
+  );
+
+  // Group shelves by zone label
+  const zones = {};
+  for (const sh of (d.shelves || [])) {
+    if (!sh) continue;
+    const zone = getZoneLabel(sh.shelf_id);
+    if (!zones[zone]) zones[zone] = [];
+    zones[zone].push(sh);
+  }
+
+  // Determine how many items are on each shelf
+  const shelfItemCount = {};
+  for (const sh of (d.shelves || [])) {
+    if (!sh) continue;
+    shelfItemCount[sh.shelf_id] = (sh.levels || []).reduce((s, l) => s + (l.items?.length || 0), 0);
+  }
+
+  // Render waiting item count per shelf
+  const shelfWaitCount = {};
+  for (const it of waitingItems) {
+    const sid = it.suggested_position?.shelf_id;
+    if (sid) shelfWaitCount[sid] = (shelfWaitCount[sid] || 0) + 1;
+  }
+
+  const zoneKeys = Object.keys(zones);
+  const html = `<div class="warehouse-map">
+    ${zoneKeys.map(zk => {
+      const shelves = zones[zk];
+      // Lay shelves in rows of up to 2 per row
+      const rows = [];
+      for (let i = 0; i < shelves.length; i += 2) rows.push(shelves.slice(i, i+2));
+      return `<div class="zone-block">
+        <div class="zone-label">${zk}</div>
+        <div class="zone-rows">
+          ${rows.map(row => `<div class="zone-row">
+            ${row.map(sh => {
+              const isSuggested = suggestedShelfIds.has(sh.shelf_id);
+              const cnt = shelfItemCount[sh.shelf_id] || 0;
+              const wcnt = shelfWaitCount[sh.shelf_id] || 0;
+              const dots = Array.from({length: Math.min(cnt, 6)}, () => '<div class="items-dot"></div>').join('');
+              return `<div class="map-shelf${isSuggested?' suggested':''}" onclick="openShelfModal('${sh.shelf_id}')" title="${sh.label||sh.shelf_id} — click để xem chi tiết">
+                ${isSuggested ? `<div class="map-shelf-badge">${wcnt} chờ</div>` : ''}
+                <div class="map-shelf-label">${sh.label||sh.shelf_id}</div>
+                <div class="map-shelf-items-dot">${dots}</div>
+                <div class="map-shelf-sub">${cnt} vật</div>
+              </div>`;
+            }).join('')}
+          </div>`).join('')}
+        </div>
+      </div>`;
+    }).join('')}
+  </div>`;
+
+  document.getElementById('wh-map-container').innerHTML = html;
+}
+
+function renderShelfDetailGrid(d, waitingItems) {
   const shelfHtml = (d.shelves || []).map(sh => {
     if (!sh) return '';
     const levels = (sh.levels || []).slice().reverse();
@@ -574,8 +881,9 @@ function renderShelves() {
           <div class="shelf-name">${sh.label || sh.shelf_id}</div>
           <div style="font-size:10px;color:var(--text3);font-family:var(--mono);margin-top:2px">${sh.physical_size_cm?.w}×${sh.physical_size_cm?.h}×${sh.physical_size_cm?.d} cm</div>
         </div>
-        <div>
+        <div style="display:flex;gap:4px;align-items:center">
           <span class="badge ${(sh.levels||[]).some(l=>l.status==='warning')?'warning':'ok'}">${(sh.levels||[]).some(l=>l.status==='warning')?'⚠ warn':'✓ ok'}</span>
+          <button class="btn btn-ghost btn-sm" onclick="openShelfModal('${sh.shelf_id}')">3D</button>
         </div>
       </div>
       ${levels.map(lv => {
@@ -587,7 +895,7 @@ function renderShelves() {
           <div class="floor-row-top">
             <span class="floor-label">Tầng ${lv.level_num}</span>
             <span style="font-size:10px;font-family:var(--mono);color:${warn?'var(--warn)':'var(--text3)'}">
-              Expected: ${lv.expected_count} · Detected: ${lv.detected_count}
+              ${lv.detected_count}/${lv.expected_count}
             </span>
           </div>
           <div class="capacity-bar"><div class="capacity-fill ${fillClass}" style="width:${pct}%"></div></div>
@@ -600,15 +908,160 @@ function renderShelves() {
       }).join('')}
     </div>`;
   }).join('');
+  document.getElementById('shelf-detail-grid').innerHTML = shelfHtml;
+}
 
-  document.getElementById('content').innerHTML = `
-    <div class="sec-head mb-16">
-      <span class="sec-title">${(d.shelves||[]).length} kệ hàng · mỗi kệ 4 tầng · ${overviewData.placed||0} items đang trên kệ</span>
-      <div style="display:flex;gap:6px;align-items:center">
-        <span style="font-size:10px;color:var(--text3);font-family:var(--mono)">T4 = cao nhất</span>
+// ── Shelf 3D Modal ───────────────────────────────────────────────────────────
+async function openShelfModal(shelfId) {
+  const overlay = document.getElementById('shelf-modal-overlay');
+  const body = document.getElementById('modal-shelf-body');
+  const title = document.getElementById('modal-shelf-title');
+  const sub = document.getElementById('modal-shelf-sub');
+
+  body.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text3)">Đang tải...</div>';
+  overlay.classList.add('open');
+
+  // Ensure fresh data
+  await fetchOverview();
+  if (allItems.length === 0) await fetchItems();
+
+  const d = overviewData;
+  const shelf = (d?.shelves || []).find(s => s?.shelf_id === shelfId);
+  if (!shelf) { body.innerHTML = '<div class="empty-state">Không tìm thấy kệ</div>'; return; }
+
+  const waitingItems = allItems.filter(i =>
+    i.status === 'waiting_for_placement' &&
+    i.suggested_position?.shelf_id === shelfId
+  );
+
+  title.textContent = `Mô phỏng kệ: ${shelf.label || shelf.shelf_id}`;
+  sub.textContent = `${shelf.shelf_id} · ${shelf.physical_size_cm?.w}×${shelf.physical_size_cm?.h}×${shelf.physical_size_cm?.d} cm · ${waitingItems.length} vật đang chờ gợi ý`;
+
+  body.innerHTML = renderShelfDetail3D(shelf, waitingItems);
+}
+
+function closeShelfModal(evt) {
+  if (evt && evt.target !== document.getElementById('shelf-modal-overlay')) return;
+  document.getElementById('shelf-modal-overlay').classList.remove('open');
+}
+
+// Color palette for placed items
+const ITEM_COLORS = [
+  { bg: 'rgba(0,212,170,.22)', border: '#00d4aa', text: '#00d4aa' },
+  { bg: 'rgba(0,153,204,.22)', border: '#0099cc', text: '#0099cc' },
+  { bg: 'rgba(139,90,246,.22)', border: '#8b5cf6', text: '#8b5cf6' },
+  { bg: 'rgba(245,158,11,.18)', border: '#f59e0b', text: '#f59e0b' },
+  { bg: 'rgba(236,72,153,.18)', border: '#ec4899', text: '#ec4899' },
+  { bg: 'rgba(59,130,246,.2)',  border: '#3b82f6', text: '#3b82f6' },
+];
+
+function renderShelfDetail3D(shelf, waitingItems) {
+  // Sort levels top→bottom for display (T4 at top, T1 at bottom)
+  const levels = [...(shelf.levels || [])].sort((a,b) => Number(b.level_num||0) - Number(a.level_num||0));
+  const capacityCm = shelf.physical_size_cm?.w || 60;
+
+  // Scale: pixels per cm
+  const pxPerCm = 7;
+  const totalW = Math.max(capacityCm * pxPerCm, 380);
+  const levelH = 80; // px per level
+
+  let colorIdx = 0;
+
+  const levelsHtml = levels.map(lv => {
+    const placedItems = (lv.items || []);
+    const suggForLevel = waitingItems.filter(i => i.suggested_position?.level_id === lv.level_id);
+
+    let itemBoxes = '';
+    for (let i = 0; i < placedItems.length; i++) {
+      const it = placedItems[i];
+      const pos = it.placed_position || it.suggested_position || {};
+      const xOff = Number(pos.x_offset_cm || 0);
+      const wCm  = Number(it.size_cm?.w || 3);
+      const hCm  = Number(it.size_cm?.h || 5);
+      const xPx  = xOff * pxPerCm;
+      const wPx  = Math.max(wCm * pxPerCm, 18);
+      const hPx  = Math.min(hCm * pxPerCm, levelH - 6);
+      const col  = ITEM_COLORS[colorIdx % ITEM_COLORS.length];
+      colorIdx++;
+      const shortId = it.item_id.slice(-6);
+      itemBoxes += `<div class="shelf-item-box"
+        style="left:${xPx}px;width:${wPx}px;height:${hPx}px;
+               background:${col.bg};border:1.5px solid ${col.border};color:${col.text}"
+        onclick="openDetail('${it.item_id}')" title="${it.item_id} (${it.size_cm?.w}×${it.size_cm?.h}×${it.size_cm?.d} cm)">
+        <span class="item-label">${shortId}</span>
+      </div>`;
+    }
+
+    // Suggested placements — place after existing items
+    for (let i = 0; i < suggForLevel.length; i++) {
+      const it = suggForLevel[i];
+      const pos = it.suggested_position || {};
+      const xOff = Number(pos.x_offset_cm || 0);
+      const wCm  = Number(it.size_cm?.w || 3);
+      const hCm  = Number(it.size_cm?.h || 5);
+      const xPx  = xOff * pxPerCm;
+      const wPx  = Math.max(wCm * pxPerCm, 22);
+      const hPx  = Math.min(hCm * pxPerCm, levelH - 6);
+      itemBoxes += `<div class="shelf-item-suggested"
+        style="left:${xPx}px;width:${wPx}px;height:${hPx}px"
+        title="Vị trí gợi ý: ${it.item_id} (${it.size_cm?.w}×${it.size_cm?.h}×${it.size_cm?.d} cm) — chờ xếp">
+        <span class="suggested-icon">📦</span>
+        <span class="suggested-label">${it.item_id.slice(-4)}</span>
+      </div>`;
+    }
+
+    const pct = Math.round(((lv.used_cm||0) / (lv.capacity_cm||1)) * 100);
+    const warn = lv.expected_count !== lv.detected_count;
+    return `<div class="shelf-level-row">
+      <div class="shelf-level-label">
+        <span style="font-weight:600;color:${suggForLevel.length?'#ef4444':'var(--text2)'}">T${lv.level_num}</span>
+        <span style="font-size:8px">${pct}%</span>
+        ${warn?`<span style="color:var(--warn);font-size:8px">⚠</span>`:''}
+      </div>
+      <div class="shelf-level-content" style="height:${levelH}px;min-width:${totalW}px">
+        ${itemBoxes}
+        <div class="shelf-floor"></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  return `
+    <div class="shelf-3d">
+      <div class="shelf-3d-header">
+        <span>← ${capacityCm} cm →</span>
+        <span>${levels.length} tầng · T${levels[levels.length-1]?.level_num||1} (thấp nhất) → T${levels[0]?.level_num||4} (cao nhất)</span>
+      </div>
+      <div style="overflow-x:auto">
+        ${levelsHtml}
       </div>
     </div>
-    <div class="shelf-grid">${shelfHtml}</div>
+    <div class="shelf-legend">
+      <div class="legend-item">
+        <div class="legend-box" style="background:rgba(0,212,170,.22);border:1.5px solid #00d4aa"></div>
+        <span>Vật đã đặt (click để xem chi tiết)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dashed"></div>
+        <span>Vị trí gợi ý (chờ xếp kệ)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-box" style="background:var(--bg4);border:1px solid var(--border)"></div>
+        <span>Khoảng trống</span>
+      </div>
+    </div>
+    ${waitingItems.length > 0 ? `
+    <div style="margin-top:14px;padding:12px 14px;background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.25);border-radius:var(--radius)">
+      <div style="font-size:11px;font-weight:600;color:#ef4444;margin-bottom:8px">📦 Vật đang chờ xếp vào kệ này (${waitingItems.length})</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
+        ${waitingItems.map(it => `
+          <div style="background:var(--bg3);border:1px solid rgba(239,68,68,.3);border-radius:4px;padding:5px 10px;font-size:10px;font-family:var(--mono)">
+            <span style="color:#ef4444">${it.item_id}</span>
+            <span style="color:var(--text3)"> · ${it.size_cm?.w}×${it.size_cm?.h}×${it.size_cm?.d}cm</span>
+            <span style="color:var(--text3)"> · ${it.suggested_position?.level_id||'?'} x=${it.suggested_position?.x_offset_cm||0}cm</span>
+          </div>
+        `).join('')}
+      </div>
+    </div>` : ''}
   `;
 }
 

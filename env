@@ -1,0 +1,5 @@
+MONGODB_URI=mongodb+srv://23521194_admin:Anhthy213%40@cluster0.syrnpqe.mongodb.net/?appName=Cluster0
+DEFAULT_SHELF_ID=SHELF_A
+SEED_DEMO_DATA=false
+CORS_ORIGIN=*
+PORT=3000
