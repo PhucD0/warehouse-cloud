@@ -11,20 +11,20 @@
 /* ── Reset & Base ── */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:       #0a0c0f;
-  --bg2:      #0f1215;
-  --bg3:      #161a1f;
-  --bg4:      #1c2128;
-  --border:   #2a3040;
-  --border2:  #3a4454;
-  --text:     #e2e8f0;
-  --text2:    #8b9ab0;
-  --text3:    #4a5568;
-  --accent:   #00d4aa;
-  --accent2:  #0099cc;
-  --warn:     #f59e0b;
-  --danger:   #ef4444;
-  --success:  #10b981;
+  --bg:       #f0f4f8;
+  --bg2:      #ffffff;
+  --bg3:      #f8fafc;
+  --bg4:      #edf2f7;
+  --border:   #e2e8f0;
+  --border2:  #cbd5e1;
+  --text:     #1a202c;
+  --text2:    #4a5568;
+  --text3:    #94a3b8;
+  --accent:   #059669;
+  --accent2:  #2563eb;
+  --warn:     #d97706;
+  --danger:   #dc2626;
+  --success:  #059669;
   --mono:     'IBM Plex Mono', monospace;
   --sans:     'IBM Plex Sans', sans-serif;
   --radius:   6px;
@@ -33,10 +33,10 @@
 html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--sans);font-size:14px;line-height:1.5}
 button{cursor:pointer;font-family:var(--sans);border:none;outline:none}
 a{color:inherit;text-decoration:none}
-input,select{font-family:var(--sans);font-size:13px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:var(--radius);padding:6px 10px;outline:none}
+input,select{font-family:var(--sans);font-size:13px;background:var(--bg2);border:1px solid var(--border);color:var(--text);border-radius:var(--radius);padding:6px 10px;outline:none}
 input:focus,select:focus{border-color:var(--accent2)}
 ::-webkit-scrollbar{width:6px;height:6px}
-::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-track{background:var(--bg4)}
 ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
 
 /* ── Layout ── */
@@ -57,7 +57,7 @@ input:focus,select:focus{border-color:var(--accent2)}
 }
 .logo{display:flex;align-items:center;gap:8px;margin-bottom:6px}
 .logo-icon{width:28px;height:28px;background:var(--accent);border-radius:5px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.logo-icon svg{width:16px;height:16px}
+.logo-icon svg{width:16px;height:16px;stroke:#fff}
 .logo-text{font-size:14px;font-weight:600;letter-spacing:-.3px;color:var(--text)}
 .logo-sub{font-size:10px;color:var(--text3);font-family:var(--mono);letter-spacing:.05em}
 .sidebar-status{margin-top:10px;display:flex;align-items:center;gap:6px;font-size:10px;color:var(--text3);font-family:var(--mono)}
@@ -76,7 +76,7 @@ nav{padding:12px 10px;flex:1;overflow-y:auto}
   position:relative;
 }
 .nav-item:hover{background:var(--bg3);color:var(--text)}
-.nav-item.active{background:rgba(0,212,170,.1);color:var(--accent)}
+.nav-item.active{background:rgba(5,150,105,.1);color:var(--accent)}
 .nav-item .nav-badge{
   margin-left:auto;background:var(--danger);color:#fff;
   font-size:9px;font-family:var(--mono);padding:1px 5px;
@@ -124,7 +124,7 @@ nav{padding:12px 10px;flex:1;overflow-y:auto}
   background:var(--bg3);border:1px solid var(--border2);
   border-radius:var(--radius);padding:10px 14px;
   font-size:12px;color:var(--text);min-width:260px;max-width:360px;
-  box-shadow:0 8px 24px rgba(0,0,0,.5);
+  box-shadow:0 8px 24px rgba(0,0,0,.12);
   animation:toast-in .25s ease;
   display:flex;align-items:flex-start;gap:8px;
 }
@@ -163,7 +163,7 @@ table{width:100%;border-collapse:collapse;font-size:12px}
 th{background:var(--bg3);color:var(--text3);font-family:var(--mono);font-size:10px;letter-spacing:.05em;text-transform:uppercase;padding:9px 14px;text-align:left;white-space:nowrap;border-bottom:1px solid var(--border)}
 td{padding:10px 14px;border-bottom:1px solid var(--border);vertical-align:middle;color:var(--text2)}
 tr:last-child td{border-bottom:none}
-tr:hover td{background:rgba(255,255,255,.015)}
+tr:hover td{background:rgba(0,0,0,.025)}
 .mono{font-family:var(--mono);font-size:11px;color:var(--text)}
 
 /* ── Status badges ── */
@@ -179,6 +179,7 @@ tr:hover td{background:rgba(255,255,255,.015)}
 .badge.unknown    {background:rgba(139,90,246,.1);color:#8b5cf6;border:1px solid rgba(139,90,246,.2)}
 .badge.ok         {background:rgba(16,185,129,.1);color:#10b981;border:1px solid rgba(16,185,129,.2)}
 .badge.warning    {background:rgba(245,158,11,.1);color:#f59e0b;border:1px solid rgba(245,158,11,.25)}
+.badge.outbound_pending{background:rgba(245,158,11,.12);color:#d97706;border:1px solid rgba(245,158,11,.30)}
 
 /* ── Shelf visual ── */
 .shelf-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px}
@@ -192,6 +193,12 @@ tr:hover td{background:rgba(255,255,255,.015)}
 .floor-block:last-child{border-bottom:none}
 .floor-block:hover{background:var(--bg3)}
 .floor-block.warn{border-left:2px solid var(--warn)}
+.floor-block.outbound{border-left:3px solid #ef4444;background:rgba(239,68,68,.045)}
+.floor-block.outbound:hover{background:rgba(239,68,68,.075)}
+.floor-block.outbound .capacity-bar{box-shadow:0 0 0 1px rgba(239,68,68,.18)}
+.overview-outbound-row{display:flex;gap:4px;flex-wrap:wrap;margin-top:6px}
+.overview-outbound-chip{font-size:8px;font-family:var(--mono);padding:2px 5px;border-radius:3px;color:#ef4444;background:rgba(239,68,68,.09);border:1px solid rgba(239,68,68,.35);cursor:pointer}
+.overview-outbound-chip:hover{border-color:#ef4444;background:rgba(239,68,68,.14)}
 .floor-row-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
 .floor-label{font-size:11px;font-family:var(--mono);color:var(--text2)}
 .floor-counts{font-size:10px;font-family:var(--mono);color:var(--text3)}
@@ -270,8 +277,8 @@ tr:hover td{background:rgba(255,255,255,.015)}
   padding:7px 14px;border-radius:var(--radius);
   font-size:12px;font-weight:500;transition:all .15s;
 }
-.btn-primary{background:var(--accent);color:#000}
-.btn-primary:hover{background:#00e8bc}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:#047857}
 .btn-danger{background:rgba(239,68,68,.15);color:var(--danger);border:1px solid rgba(239,68,68,.3)}
 .btn-danger:hover{background:rgba(239,68,68,.25)}
 .btn-ghost{background:transparent;color:var(--text2);border:1px solid var(--border)}
@@ -283,16 +290,259 @@ tr:hover td{background:rgba(255,255,255,.015)}
 .mb-24{margin-bottom:24px}
 .empty-state{padding:40px;text-align:center;color:var(--text3);font-size:13px;border:1px dashed var(--border);border-radius:var(--radius)}
 
+/* ── Warehouse Map ── */
+.warehouse-map{
+  display:flex;gap:40px;flex-wrap:wrap;
+  padding:24px;background:var(--bg2);
+  border:1px solid var(--border);border-radius:var(--radius);
+  margin-bottom:24px;
+}
+.zone-block{display:flex;flex-direction:column;gap:10px}
+.zone-label{
+  font-size:11px;font-family:var(--mono);font-weight:600;
+  letter-spacing:.1em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:4px;
+}
+.zone-rows{display:flex;flex-direction:column;gap:10px}
+.zone-row{display:flex;gap:10px}
+.map-shelf{
+  width:72px;height:110px;
+  border:2px dashed #2d7a4f;
+  border-radius:5px;
+  background:rgba(16,185,129,.08);
+  cursor:pointer;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:4px;
+  transition:all .18s;
+  position:relative;
+}
+.map-shelf:hover{
+  background:rgba(16,185,129,.18);
+  border-color:#10b981;
+  transform:translateY(-2px);
+  box-shadow:0 4px 16px rgba(16,185,129,.2);
+}
+.map-shelf.suggested{
+  border-color:#ef4444;
+  background:rgba(239,68,68,.12);
+  animation:shelf-pulse 1.8s ease-in-out infinite;
+}
+.map-shelf.suggested:hover{
+  background:rgba(239,68,68,.22);
+  border-color:#f87171;
+  box-shadow:0 4px 16px rgba(239,68,68,.25);
+}
+@keyframes shelf-pulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,0)}
+  50%{box-shadow:0 0 0 6px rgba(239,68,68,.15)}
+}
+.map-shelf-label{
+  font-size:10px;font-family:var(--mono);
+  font-weight:600;color:var(--text2);
+}
+.map-shelf.suggested .map-shelf-label{color:#ef4444}
+.map-shelf-sub{font-size:9px;color:var(--text3);font-family:var(--mono)}
+.map-shelf-badge{
+  position:absolute;top:4px;right:4px;
+  background:#ef4444;color:#fff;
+  font-size:8px;font-family:var(--mono);
+  padding:1px 4px;border-radius:4px;font-weight:700;
+}
+.map-shelf-items-dot{
+  display:flex;gap:2px;flex-wrap:wrap;justify-content:center;
+  max-width:52px;
+}
+.items-dot{
+  width:7px;height:7px;border-radius:1px;
+  background:rgba(5,150,105,.6);
+}
+
+/* ── Shelf Detail Modal ── */
+#shelf-modal-overlay{
+  position:fixed;inset:0;
+  background:rgba(0,0,0,.7);backdrop-filter:blur(4px);
+  z-index:1000;display:flex;align-items:center;justify-content:center;
+  opacity:0;pointer-events:none;transition:opacity .2s;
+}
+#shelf-modal-overlay.open{opacity:1;pointer-events:all}
+#shelf-modal{
+  background:var(--bg2);border:1px solid var(--border2);
+  border-radius:10px;padding:28px;
+  min-width:560px;max-width:90vw;max-height:85vh;
+  overflow-y:auto;
+  box-shadow:0 24px 60px rgba(0,0,0,.2);
+  transform:translateY(16px);transition:transform .2s;
+}
+#shelf-modal-overlay.open #shelf-modal{transform:none}
+.modal-head{
+  display:flex;justify-content:space-between;align-items:flex-start;
+  margin-bottom:20px;
+}
+.modal-title{font-size:16px;font-weight:600}
+.modal-sub{font-size:11px;color:var(--text3);font-family:var(--mono);margin-top:3px}
+.modal-close{
+  background:transparent;border:1px solid var(--border);
+  color:var(--text2);border-radius:var(--radius);
+  padding:4px 10px;font-size:13px;cursor:pointer;
+  transition:all .15s;
+}
+.modal-close:hover{border-color:var(--danger);color:var(--danger)}
+
+/* ── 3D Shelf simulator ── */
+.shelf-3d{
+  border:2px solid var(--border2);
+  border-radius:8px;overflow:hidden;
+  background:var(--bg3);
+}
+.shelf-3d-header{
+  background:var(--bg4);border-bottom:1px solid var(--border);
+  padding:8px 14px;display:flex;justify-content:space-between;
+  font-size:10px;font-family:var(--mono);color:var(--text3);
+}
+.shelf-level-row{
+  display:flex;align-items:stretch;
+  border-bottom:1px solid var(--border);
+  min-height:70px;
+}
+.shelf-level-row:last-child{border-bottom:none}
+.shelf-level-label{
+  width:52px;min-width:52px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:10px;font-family:var(--mono);color:var(--text3);
+  background:var(--bg4);border-right:1px solid var(--border);
+  flex-direction:column;gap:3px;
+}
+.shelf-level-content{
+  flex:1;position:relative;
+  min-height:70px;
+  background:repeating-linear-gradient(
+    90deg,
+    transparent,
+    transparent 9px,
+    rgba(0,0,0,.03) 9px,
+    rgba(0,0,0,.03) 10px
+  );
+}
+.shelf-floor{
+  position:absolute;bottom:0;left:0;right:0;
+  height:3px;background:var(--border2);
+}
+.shelf-item-box{
+  position:absolute;bottom:3px;
+  border-radius:3px 3px 0 0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:8px;font-family:var(--mono);
+  transition:all .15s;cursor:pointer;
+  overflow:hidden;
+}
+.shelf-item-box:hover{filter:brightness(1.2);z-index:2}
+.shelf-item-box .item-label{
+  writing-mode:vertical-rl;
+  text-orientation:mixed;
+  transform:rotate(180deg);
+  font-size:8px;opacity:.8;
+  max-height:100%;overflow:hidden;
+  white-space:nowrap;text-overflow:ellipsis;
+}
+.shelf-item-suggested{
+  position:absolute;bottom:3px;
+  border:2px dashed #ef4444;
+  border-radius:3px 3px 0 0;
+  background:rgba(239,68,68,.07);
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:2px;
+  animation:dash-anim 1s linear infinite;
+}
+@keyframes dash-anim{
+  to{stroke-dashoffset:-8}
+}
+.suggested-icon{
+  font-size:14px;line-height:1;
+}
+.suggested-label{
+  font-size:7px;font-family:var(--mono);
+  color:#ef4444;text-align:center;padding:0 2px;
+}
+.shelf-legend{
+  display:flex;gap:16px;flex-wrap:wrap;
+  margin-top:16px;padding:12px 14px;
+  background:var(--bg3);border:1px solid var(--border);
+  border-radius:var(--radius);
+  font-size:10px;font-family:var(--mono);color:var(--text3);
+}
+.legend-item{display:flex;align-items:center;gap:6px}
+.legend-box{
+  width:16px;height:12px;border-radius:2px;
+}
+.legend-dashed{
+  width:16px;height:12px;border-radius:2px;
+  border:2px dashed #ef4444;
+  background:rgba(239,68,68,.07);
+}
+
+
+
+/* ── QR Search / Outbound highlight ── */
+.map-shelf.outbound{
+  border-color:#f59e0b;
+  background:rgba(245,158,11,.13);
+  animation:shelf-pulse 1.3s ease-in-out infinite;
+}
+.map-shelf.outbound .map-shelf-label{color:#d97706}
+.outbound-badge{background:#f59e0b!important;color:#111!important}
+.item-chip.outbound{border-color:#f59e0b;color:#d97706;background:rgba(245,158,11,.1)}
+.shelf-item-box.outbound{
+  background:rgba(245,158,11,.20)!important;
+  border:2px solid #f59e0b!important;
+  color:#d97706!important;
+  box-shadow:0 0 0 3px rgba(245,158,11,.16);
+  animation:shelf-pulse 1.35s ease-in-out infinite;
+  z-index:5;
+}
+.outbound-marker{
+  position:absolute;top:3px;left:3px;right:3px;
+  background:#f59e0b;color:#111;
+  font-size:7px;font-family:var(--mono);font-weight:700;
+  border-radius:2px;padding:1px 2px;text-align:center;
+}
+.qr-search-grid{display:grid;grid-template-columns:minmax(280px,420px) 1fr;gap:16px;align-items:start}
+@media(max-width:900px){.qr-search-grid{grid-template-columns:1fr}}
+.qr-input-big{width:100%;font-size:14px;padding:12px 14px;font-family:var(--mono)}
+.qr-upload-box{border:1px dashed var(--border2);border-radius:var(--radius);background:var(--bg3);padding:16px;display:flex;flex-direction:column;gap:10px}
+.qr-file-input{width:100%;padding:12px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);font-family:var(--mono);font-size:12px}
+.qr-preview{display:flex;gap:12px;align-items:center;min-height:80px}
+.qr-preview img{max-width:120px;max-height:120px;border:1px solid var(--border);border-radius:4px;background:white;padding:4px}
+.qr-decoded{font-family:var(--mono);font-size:12px;color:var(--text);word-break:break-all}
+.qr-decoded.empty{color:var(--text3)}
+.qr-result-card{border:1px solid var(--border);border-radius:var(--radius);background:var(--bg2);padding:16px}
+.qr-result-title{font-size:13px;font-weight:600;margin-bottom:8px}
+.qr-help{font-size:11px;color:var(--text3);font-family:var(--mono);line-height:1.6}
+
 /* ── Responsive ── */
 @media(max-width:600px){
   :root{--sidebar:0px}
   #sidebar{display:none}
   #content{padding:16px}
+  #shelf-modal{min-width:95vw;padding:16px}
 }
 </style>
 </head>
 <body>
 <div id="toast-container"></div>
+
+<!-- Shelf Detail Modal -->
+<div id="shelf-modal-overlay" onclick="closeShelfModal(event)">
+  <div id="shelf-modal">
+    <div class="modal-head">
+      <div>
+        <div class="modal-title" id="modal-shelf-title">Chi tiết kệ</div>
+        <div class="modal-sub" id="modal-shelf-sub"></div>
+      </div>
+      <button class="modal-close" onclick="closeShelfModal()">✕ Đóng</button>
+    </div>
+    <div id="modal-shelf-body"></div>
+  </div>
+</div>
 <div id="layout">
   <!-- Sidebar -->
   <aside id="sidebar">
@@ -336,6 +586,13 @@ tr:hover td{background:rgba(255,255,255,.015)}
           <line x1="6" y1="5" x2="10" y2="5"/><line x1="6" y1="8" x2="10" y2="8"/><line x1="6" y1="11" x2="8" y2="11"/>
         </svg>
         Quản lý hàng
+      </div>
+      <div class="nav-item" data-page="qrsearch" onclick="nav('qrsearch')">
+        <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="2" y="2" width="5" height="5" rx=".8"/><rect x="9" y="2" width="5" height="5" rx=".8"/>
+          <rect x="2" y="9" width="5" height="5" rx=".8"/><path d="M10 10h4v4h-4z"/><path d="M9 13h1M13 9v1"/>
+        </svg>
+        Tìm hàng QR
       </div>
       <div class="nav-item" data-page="alerts" onclick="nav('alerts')">
         <svg class="nav-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -390,12 +647,18 @@ let overviewData = null;
 let allItems = [];
 let allAlerts = [];
 let allEvents = [];
+let allRemoveRequests = [];
 let alertCount = 0;
+let qrLookupResult = null;
+let lastQrInput = "";
+let qrUploadedFile = null;
+let qrUploadedPreview = "";
 
 const PAGE_META = {
   overview: { title: 'Tổng quan', sub: 'Warehouse overview dashboard' },
   shelves:  { title: 'Sơ đồ kệ', sub: 'Shelf level visualization' },
   items:    { title: 'Quản lý hàng', sub: 'Item management & tracking' },
+  qrsearch: { title: 'Tìm hàng QR', sub: 'Lookup item by QR and send outbound request' },
   alerts:   { title: 'Cảnh báo', sub: 'Inventory count warnings' },
   events:   { title: 'Event Log', sub: 'All system events from Jetson Nano' },
   detail:   { title: 'Chi tiết mặt hàng', sub: 'Item detail & event history' },
@@ -412,6 +675,10 @@ socket.on('disconnect', () => setWsStatus(false));
 socket.on('overview', d => { overviewData = d; if (currentPage === 'overview') renderOverview(); });
 socket.on('event', e => {
   allEvents.unshift(e);
+  if (e.event_type === 'item_removed') {
+    allRemoveRequests = allRemoveRequests.filter(r => !(r.item_id === e.item_id && r.status === 'pending'));
+    if (['shelves','items','qrsearch','detail','overview'].includes(currentPage)) setTimeout(loadPage, 150);
+  }
   if (e.event_type === 'inventory_count_warning') {
     alertCount++;
     updateAlertBadge();
@@ -421,6 +688,16 @@ socket.on('event', e => {
   if (currentPage === 'events') renderEvents();
   if (currentPage === 'detail' && e.item_id === currentItemId) loadPage();
 });
+
+socket.on('remove_request', r => {
+  upsertRemoveRequest(r);
+  toast(`📦 Đã tạo yêu cầu outbound: ${r.item_id}`, 'warn');
+  if (['shelves','items','qrsearch','detail'].includes(currentPage)) loadPage();
+});
+socket.on('outbound_target', t => {
+  if (t?.item_id) toast(`Jetson sẽ highlight outbound cho ${t.item_id}`, 'warn');
+});
+
 socket.on('jetson_heartbeat', () => {
   document.getElementById('jetson-dot').className = 'dot online pulse';
   document.getElementById('jetson-label').textContent = 'Jetson Nano online';
@@ -451,12 +728,13 @@ function nav(page, extra) {
 async function loadPage() {
   const c = document.getElementById('content');
   switch (currentPage) {
-    case 'overview': await fetchOverview(); renderOverview(); break;
-    case 'shelves':  await fetchOverview(); renderShelves(); break;
-    case 'items':    await fetchItems(); renderItems(); break;
+    case 'overview': await fetchOverview(); await fetchItems(); await fetchRemoveRequests(); renderOverview(); break;
+    case 'shelves':  await fetchOverview(); await fetchItems(); await fetchRemoveRequests(); renderShelves(); break;
+    case 'items':    await fetchItems(); await fetchRemoveRequests(); renderItems(); break;
+    case 'qrsearch': await fetchItems(); await fetchRemoveRequests(); renderQrSearch(); break;
     case 'alerts':   await fetchAlerts(); renderAlerts(); break;
     case 'events':   await fetchEvents(); renderEvents(); break;
-    case 'detail':   await renderDetail(currentItemId); break;
+    case 'detail':   await fetchRemoveRequests(); await renderDetail(currentItemId); break;
   }
 }
 
@@ -465,6 +743,7 @@ async function fetchOverview()  { try { const r = await fetch(`${API}/api/overvi
 async function fetchItems()     { try { const r = await fetch(`${API}/api/items`); const d = await r.json(); allItems = d.items; } catch(e){} }
 async function fetchAlerts()    { try { const r = await fetch(`${API}/api/alerts`); const d = await r.json(); allAlerts = d.alerts; alertCount = allAlerts.length; updateAlertBadge(); } catch(e){} }
 async function fetchEvents()    { try { const r = await fetch(`${API}/api/events?limit=100`); const d = await r.json(); allEvents = d.events; } catch(e){} }
+async function fetchRemoveRequests(status='pending') { try { const r = await fetch(`${API}/api/remove-requests?status=${encodeURIComponent(status)}`); const d = await r.json(); allRemoveRequests = d.requests || []; } catch(e){ allRemoveRequests = []; } }
 
 function updateAlertBadge() {
   const b = document.getElementById('alert-badge');
@@ -472,33 +751,129 @@ function updateAlertBadge() {
   else b.style.display='none';
 }
 
+
+function upsertRemoveRequest(req) {
+  if (!req || !req.request_id) return;
+  const idx = allRemoveRequests.findIndex(r => r.request_id === req.request_id);
+  if (idx >= 0) allRemoveRequests[idx] = req;
+  else allRemoveRequests.unshift(req);
+}
+
+function getPendingRemoveRequestForItem(itemId) {
+  const request = (allRemoveRequests || []).find(r => r.item_id === itemId && r.status === 'pending');
+  if (request) return request;
+
+  // Backend may also decorate the item itself with outbound metadata.
+  const item = (allItems || []).find(i => i.item_id === itemId);
+  if (item?.pending_remove_request) return item.pending_remove_request;
+  if (item?.outbound_request) return item.outbound_request;
+  if (item?.outbound_status === 'pending') {
+    return {
+      request_id: item.outbound_request_id || 'pending',
+      item_id: item.item_id,
+      status: 'pending',
+      source: item.outbound_source || 'unknown',
+    };
+  }
+  return null;
+}
+
+function upsertItem(item) {
+  if (!item || !item.item_id) return;
+  const idx = allItems.findIndex(i => i.item_id === item.item_id);
+  if (idx >= 0) allItems[idx] = item;
+  else allItems.unshift(item);
+}
+
+function effectiveStatusForItem(item) {
+  return getPendingRemoveRequestForItem(item?.item_id) ? 'outbound_pending' : (item?.ui_status || item?.display_status || item?.status || 'unknown');
+}
+
+function statusBadgeClass(status) {
+  return {
+    placed:'placed', removed:'removed',
+    waiting_for_placement:'waiting',
+    missing_suspected:'missing', unknown_object:'unknown',
+    outbound_pending:'outbound_pending'
+  }[status] || 'unknown';
+}
+
+function normalizeQrClient(value) {
+  let text = String(value || '').trim();
+  try { text = decodeURIComponent(text); } catch(e) {}
+
+  const urlMatch = text.match(/(?:qr|item|code|id)=([^&\s]+)/i);
+  if (urlMatch) {
+    text = urlMatch[1];
+    try { text = decodeURIComponent(text); } catch(e) {}
+  }
+
+  text = text.replace(/^[\'"]|[\'"]$/g, '').trim();
+  text = text.split(/[?#]/)[0].trim();
+  text = text.replace(/^.*[\\/]/, '');
+  text = text.replace(/\.(png|jpg|jpeg|svg|webp)$/i, '');
+  text = text.replace(/^WH:/i, '').trim();
+  text = text.replace(/(?:[_-]QR(?:[_-]CODE)?|[_-]QRCODE)$/i, '').trim();
+
+  return text.toUpperCase();
+}
+
+function escapeHtml(v) {
+  return String(v ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+
+function qrValueForItem(item) {
+  return item?.qr_data || `WH:${item?.item_id || ''}`;
+}
+
+
 // ── Render: Overview ────────────────────────────────────────────────────────
 function renderOverview() {
   const d = overviewData;
   if (!d) { document.getElementById('content').innerHTML = '<div class="empty-state">Đang tải...</div>'; return; }
 
+  const overviewOutboundCount = (d.shelves || []).reduce((sum, sh) => {
+    if (!sh) return sum;
+    return sum + (sh.levels || []).reduce((levelSum, lv) => {
+      const outItems = (lv.items || []).filter(it => Boolean(getPendingRemoveRequestForItem(it.item_id)));
+      return levelSum + outItems.length;
+    }, 0);
+  }, 0);
+
   const shelfHtml = (d.shelves || []).map(sh => {
     if (!sh) return '';
     const levels = (sh.levels || []).slice().reverse();
-    return `<div class="shelf-box">
+    const shelfOutboundCount = levels.reduce((sum, lv) => {
+      const outItems = (lv.items || []).filter(it => Boolean(getPendingRemoveRequestForItem(it.item_id)));
+      return sum + outItems.length;
+    }, 0);
+
+    return `<div class="shelf-box${shelfOutboundCount ? ' outbound' : ''}">
       <div class="shelf-head">
         <span class="shelf-name">${sh.label || sh.shelf_id}</span>
-        <span style="font-size:10px;color:var(--text3);font-family:var(--mono)">${sh.shelf_id}</span>
+        <div style="display:flex;gap:6px;align-items:center">
+          ${shelfOutboundCount ? `<span class="badge missing">${shelfOutboundCount} OUTBOUND</span>` : ''}
+          <span style="font-size:10px;color:var(--text3);font-family:var(--mono)">${sh.shelf_id}</span>
+        </div>
       </div>
       ${levels.map(lv => {
         const pct = Math.round((lv.used_cm / lv.capacity_cm) * 100);
         const warn = lv.expected_count !== lv.detected_count;
         const fillClass = pct >= 90 ? 'fill-full' : pct >= 65 ? 'fill-warn' : 'fill-ok';
-        return `<div class="floor-block${warn?' warn':''}">
+        const items = lv.items || [];
+        const outboundItems = items.filter(it => Boolean(getPendingRemoveRequestForItem(it.item_id)));
+        return `<div class="floor-block${warn?' warn':''}${outboundItems.length?' outbound':''}">
           <div class="floor-row-top">
             <span class="floor-label">T${lv.level_num}</span>
-            <div style="display:flex;gap:6px;align-items:center">
+            <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
+              ${outboundItems.length ? `<span class="badge missing">OUT ${outboundItems.length}</span>` : ''}
               ${warn ? `<span class="badge warning">⚠ mismatch</span>` : ''}
               <span class="floor-counts">${lv.detected_count}/${lv.expected_count}</span>
             </div>
           </div>
-          <div class="capacity-bar"><div class="capacity-fill ${fillClass}" style="width:${pct}%"></div></div>
-          <div style="font-size:9px;color:var(--text3);font-family:var(--mono)">${lv.used_cm}/${lv.capacity_cm}cm · ${lv.items?.length||0} items</div>
+          <div class="capacity-bar"><div class="capacity-fill ${outboundItems.length ? 'fill-full' : fillClass}" style="width:${pct}%"></div></div>
+          <div style="font-size:9px;color:var(--text3);font-family:var(--mono)">${lv.used_cm}/${lv.capacity_cm}cm · ${items.length} items</div>
+          ${outboundItems.length ? `<div class="overview-outbound-row">${outboundItems.map(it => `<span class="overview-outbound-chip" onclick="openDetail('${it.item_id}')">${it.item_id.slice(-6)} OUT</span>`).join('')}</div>` : ''}
         </div>`;
       }).join('')}
     </div>`;
@@ -540,7 +915,12 @@ function renderOverview() {
 
     <div class="sec-head mb-16">
       <span class="sec-title">Trạng thái kệ hàng — Expected vs Detected</span>
-      <button class="btn btn-ghost btn-sm" onclick="nav('shelves')">Xem chi tiết →</button>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        ${overviewOutboundCount ? `<span style="display:flex;align-items:center;gap:5px;font-size:10px;font-family:var(--mono);color:#ef4444">
+          <span style="width:12px;height:12px;border:2px solid #ef4444;border-radius:2px;background:rgba(239,68,68,.08);display:inline-block"></span>Outbound pending (${overviewOutboundCount})
+        </span>` : ''}
+        <button class="btn btn-ghost btn-sm" onclick="nav('shelves')">Xem chi tiết →</button>
+      </div>
     </div>
     <div class="shelf-grid mb-24">${shelfHtml}</div>
 
@@ -565,17 +945,123 @@ function renderShelves() {
   const d = overviewData;
   if (!d) { document.getElementById('content').innerHTML = '<div class="empty-state">Đang tải...</div>'; return; }
 
+  // Build list of waiting items to find suggested shelves
+  const waitingItems = allItems.filter(i => i.status === 'waiting_for_placement' && i.suggested_position);
+
+  document.getElementById('content').innerHTML = `
+    <div class="sec-head mb-16">
+      <span class="sec-title">Sơ đồ kho — ${(d.shelves||[]).length} kệ · ${overviewData.placed||0} items đang trên kệ · ${waitingItems.length} chờ xếp</span>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span style="display:flex;align-items:center;gap:5px;font-size:10px;font-family:var(--mono);color:#ef4444">
+          <span style="width:12px;height:12px;border:2px dashed #ef4444;border-radius:2px;display:inline-block"></span>Kệ gợi ý
+        </span>
+        <span style="display:flex;align-items:center;gap:5px;font-size:10px;font-family:var(--mono);color:var(--success)">
+          <span style="width:12px;height:12px;border:2px dashed #2d7a4f;border-radius:2px;background:rgba(16,185,129,.1);display:inline-block"></span>Kệ bình thường
+        </span>
+      </div>
+    </div>
+    <div id="wh-map-container"></div>
+    <div class="sec-head" style="margin-top:24px;margin-bottom:14px">
+      <span class="sec-title">Chi tiết từng kệ</span>
+      <span style="font-size:10px;color:var(--text3);font-family:var(--mono)">T4 = tầng cao nhất</span>
+    </div>
+    <div class="shelf-grid" id="shelf-detail-grid"></div>
+  `;
+
+  renderWarehouseMap(d, waitingItems);
+  renderShelfDetailGrid(d, waitingItems);
+}
+
+// Group shelves into zones of 2 (A+B → KHU A, C+D → KHU B, ...)
+function getZoneLabel(shelfId) {
+  const id = String(shelfId).toUpperCase();
+  // Extract trailing letter: A→0, B→1, C→2, D→3, ...
+  const m = id.match(/([A-Z])$/);
+  if (m) {
+    const idx = m[1].charCodeAt(0) - 65; // A=0, B=1, C=2, D=3
+    const zoneIdx = Math.floor(idx / 2);  // pair: 0+1→zone0, 2+3→zone1
+    const zoneChar = String.fromCharCode(65 + zoneIdx); // 0→A, 1→B
+    return 'KHU ' + zoneChar;
+  }
+  return 'KHU ' + shelfId;
+}
+
+function renderWarehouseMap(d, waitingItems) {
+  const suggestedShelfIds = new Set(
+    waitingItems.map(i => i.suggested_position?.shelf_id).filter(Boolean)
+  );
+  const outboundShelfIds = new Set((allRemoveRequests || []).filter(r => r.status === 'pending').map(r => r.shelf_id).filter(Boolean));
+
+  // Group shelves by zone label
+  const zones = {};
+  for (const sh of (d.shelves || [])) {
+    if (!sh) continue;
+    const zone = getZoneLabel(sh.shelf_id);
+    if (!zones[zone]) zones[zone] = [];
+    zones[zone].push(sh);
+  }
+
+  // Determine how many items are on each shelf
+  const shelfItemCount = {};
+  for (const sh of (d.shelves || [])) {
+    if (!sh) continue;
+    shelfItemCount[sh.shelf_id] = (sh.levels || []).reduce((s, l) => s + (l.items?.length || 0), 0);
+  }
+
+  // Render waiting item count per shelf
+  const shelfWaitCount = {};
+  for (const it of waitingItems) {
+    const sid = it.suggested_position?.shelf_id;
+    if (sid) shelfWaitCount[sid] = (shelfWaitCount[sid] || 0) + 1;
+  }
+
+  const zoneKeys = Object.keys(zones);
+  const html = `<div class="warehouse-map">
+    ${zoneKeys.map(zk => {
+      const shelves = zones[zk];
+      // Lay shelves in rows of up to 2 per row
+      const rows = [];
+      for (let i = 0; i < shelves.length; i += 2) rows.push(shelves.slice(i, i+2));
+      return `<div class="zone-block">
+        <div class="zone-label">${zk}</div>
+        <div class="zone-rows">
+          ${rows.map(row => `<div class="zone-row">
+            ${row.map(sh => {
+              const isSuggested = suggestedShelfIds.has(sh.shelf_id);
+              const isOutbound = outboundShelfIds.has(sh.shelf_id);
+              const cnt = shelfItemCount[sh.shelf_id] || 0;
+              const wcnt = shelfWaitCount[sh.shelf_id] || 0;
+              const dots = Array.from({length: Math.min(cnt, 6)}, () => '<div class="items-dot"></div>').join('');
+              return `<div class="map-shelf${isSuggested?' suggested':''}${isOutbound?' outbound':''}" onclick="openShelfModal('${sh.shelf_id}')" title="${sh.label||sh.shelf_id} — click để xem chi tiết">
+                ${isOutbound ? `<div class="map-shelf-badge outbound-badge">OUT</div>` : (isSuggested ? `<div class="map-shelf-badge">${wcnt} chờ</div>` : '')}
+                <div class="map-shelf-label">${sh.label||sh.shelf_id}</div>
+                <div class="map-shelf-items-dot">${dots}</div>
+                <div class="map-shelf-sub">${cnt} vật</div>
+              </div>`;
+            }).join('')}
+          </div>`).join('')}
+        </div>
+      </div>`;
+    }).join('')}
+  </div>`;
+
+  document.getElementById('wh-map-container').innerHTML = html;
+}
+
+function renderShelfDetailGrid(d, waitingItems) {
   const shelfHtml = (d.shelves || []).map(sh => {
     if (!sh) return '';
-    const levels = (sh.levels || []).slice().reverse();
+    // Sort levels T1 at top to match 3D model
+    const levels = (sh.levels || []).slice().sort((a,b) => Number(a.level_num||0) - Number(b.level_num||0));
     return `<div class="shelf-box">
       <div class="shelf-head">
         <div>
           <div class="shelf-name">${sh.label || sh.shelf_id}</div>
           <div style="font-size:10px;color:var(--text3);font-family:var(--mono);margin-top:2px">${sh.physical_size_cm?.w}×${sh.physical_size_cm?.h}×${sh.physical_size_cm?.d} cm</div>
         </div>
-        <div>
+        <div style="display:flex;gap:4px;align-items:center">
           <span class="badge ${(sh.levels||[]).some(l=>l.status==='warning')?'warning':'ok'}">${(sh.levels||[]).some(l=>l.status==='warning')?'⚠ warn':'✓ ok'}</span>
+          <button class="btn btn-ghost btn-sm" onclick="openShelfModal('${sh.shelf_id}')">3D</button>
         </div>
       </div>
       ${levels.map(lv => {
@@ -587,28 +1073,181 @@ function renderShelves() {
           <div class="floor-row-top">
             <span class="floor-label">Tầng ${lv.level_num}</span>
             <span style="font-size:10px;font-family:var(--mono);color:${warn?'var(--warn)':'var(--text3)'}">
-              Expected: ${lv.expected_count} · Detected: ${lv.detected_count}
+              ${lv.detected_count}/${lv.expected_count}
             </span>
           </div>
           <div class="capacity-bar"><div class="capacity-fill ${fillClass}" style="width:${pct}%"></div></div>
           <div style="font-size:9px;color:var(--text3);font-family:var(--mono);margin-bottom:6px">${lv.used_cm}/${lv.capacity_cm} cm (${pct}%)</div>
           <div class="item-chips">
-            ${items.map(it=>`<span class="item-chip" onclick="openDetail('${it.item_id}')">${it.item_id}</span>`).join('')}
+            ${items.map(it=>`<span class="item-chip${getPendingRemoveRequestForItem(it.item_id)?' outbound':''}" onclick="openDetail('${it.item_id}')">${it.item_id.slice(-4)}${getPendingRemoveRequestForItem(it.item_id)?' OUT':''}</span>`).join('')}
             ${items.length===0?`<span style="font-size:9px;color:var(--text3);font-style:italic">trống</span>`:''}
           </div>
         </div>`;
       }).join('')}
     </div>`;
   }).join('');
+  document.getElementById('shelf-detail-grid').innerHTML = shelfHtml;
+}
 
-  document.getElementById('content').innerHTML = `
-    <div class="sec-head mb-16">
-      <span class="sec-title">${(d.shelves||[]).length} kệ hàng · mỗi kệ 4 tầng · ${overviewData.placed||0} items đang trên kệ</span>
-      <div style="display:flex;gap:6px;align-items:center">
-        <span style="font-size:10px;color:var(--text3);font-family:var(--mono)">T4 = cao nhất</span>
+// ── Shelf 3D Modal ───────────────────────────────────────────────────────────
+async function openShelfModal(shelfId) {
+  const overlay = document.getElementById('shelf-modal-overlay');
+  const body = document.getElementById('modal-shelf-body');
+  const title = document.getElementById('modal-shelf-title');
+  const sub = document.getElementById('modal-shelf-sub');
+
+  body.innerHTML = '<div style="padding:24px;text-align:center;color:var(--text3)">Đang tải...</div>';
+  overlay.classList.add('open');
+
+  // Ensure fresh data
+  await fetchOverview();
+  if (allItems.length === 0) await fetchItems();
+
+  const d = overviewData;
+  const shelf = (d?.shelves || []).find(s => s?.shelf_id === shelfId);
+  if (!shelf) { body.innerHTML = '<div class="empty-state">Không tìm thấy kệ</div>'; return; }
+
+  const waitingItems = allItems.filter(i =>
+    i.status === 'waiting_for_placement' &&
+    i.suggested_position?.shelf_id === shelfId
+  );
+
+  title.textContent = `Mô phỏng kệ: ${shelf.label || shelf.shelf_id}`;
+  sub.textContent = `${shelf.shelf_id} · ${shelf.physical_size_cm?.w}×${shelf.physical_size_cm?.h}×${shelf.physical_size_cm?.d} cm · ${waitingItems.length} vật đang chờ gợi ý`;
+
+  body.innerHTML = renderShelfDetail3D(shelf, waitingItems);
+}
+
+function closeShelfModal(evt) {
+  if (evt && evt.target !== document.getElementById('shelf-modal-overlay')) return;
+  document.getElementById('shelf-modal-overlay').classList.remove('open');
+}
+
+// Color palette for placed items
+const ITEM_COLORS = [
+  { bg: 'rgba(0,212,170,.22)', border: '#00d4aa', text: '#00d4aa' },
+  { bg: 'rgba(0,153,204,.22)', border: '#0099cc', text: '#0099cc' },
+  { bg: 'rgba(139,90,246,.22)', border: '#8b5cf6', text: '#8b5cf6' },
+  { bg: 'rgba(245,158,11,.18)', border: '#f59e0b', text: '#f59e0b' },
+  { bg: 'rgba(236,72,153,.18)', border: '#ec4899', text: '#ec4899' },
+  { bg: 'rgba(59,130,246,.2)',  border: '#3b82f6', text: '#3b82f6' },
+];
+
+function renderShelfDetail3D(shelf, waitingItems) {
+  // Sort levels: T1 at top (first), T4 at bottom
+  const levels = [...(shelf.levels || [])].sort((a,b) => Number(a.level_num||0) - Number(b.level_num||0));
+  const capacityCm = shelf.physical_size_cm?.w || 60;
+
+  // Scale: pixels per cm — larger for readability
+  const pxPerCm = 20;
+  const totalW = capacityCm * pxPerCm;
+  const levelH = 130; // px per level
+
+  let colorIdx = 0;
+
+  const levelsHtml = levels.map((lv, idx) => {
+    const placedItems = (lv.items || []);
+    const suggForLevel = waitingItems.filter(i => i.suggested_position?.level_id === lv.level_id);
+
+    const cap = capacityCm || 1;
+    let itemBoxes = '';
+    for (let i = 0; i < placedItems.length; i++) {
+      const it = placedItems[i];
+      const pos = it.placed_position || it.suggested_position || {};
+      const xOff = Number(pos.x_offset_cm || 0);
+      const wCm  = Number(it.size_cm?.w || 3);
+      const hCm  = Number(it.size_cm?.h || 5);
+      const xPct = (xOff / cap) * 100;
+      const wPct = (wCm / cap) * 100;
+      const hPx  = Math.min(Math.round(hCm * pxPerCm), levelH - 10);
+      const col  = ITEM_COLORS[colorIdx % ITEM_COLORS.length];
+      colorIdx++;
+      const shortId = it.item_id.slice(-6);
+      const pendingReq = getPendingRemoveRequestForItem(it.item_id);
+      const boxClass = pendingReq ? 'shelf-item-box outbound' : 'shelf-item-box';
+      const boxStyle = pendingReq
+        ? 'background:rgba(245,158,11,.20);border:2px solid #f59e0b;color:#d97706'
+        : `background:${col.bg};border:2px solid ${col.border};color:${col.text}`;
+      itemBoxes += `<div class="${boxClass}"
+        style="left:${xPct}%;width:${wPct}%;height:${hPx}px;${boxStyle}"
+        onclick="openDetail('${it.item_id}')" title="${it.item_id} — ${it.size_cm?.w}×${it.size_cm?.h}×${it.size_cm?.d} cm · x=${xOff}cm${pendingReq?' · OUTBOUND PENDING':''}">
+        ${pendingReq ? '<span class="outbound-marker">OUTBOUND</span>' : ''}
+        <span class="item-label">${shortId}</span>
+      </div>`;
+    }
+
+    // Suggested placements
+    for (let i = 0; i < suggForLevel.length; i++) {
+      const it = suggForLevel[i];
+      const pos = it.suggested_position || {};
+      const xOff = Number(pos.x_offset_cm || 0);
+      const wCm  = Number(it.size_cm?.w || 3);
+      const hCm  = Number(it.size_cm?.h || 5);
+      const xPct = (xOff / cap) * 100;
+      const wPct = (wCm / cap) * 100;
+      const hPx  = Math.min(Math.round(hCm * pxPerCm), levelH - 10);
+      itemBoxes += `<div class="shelf-item-suggested"
+        style="left:${xPct}%;width:${wPct}%;height:${hPx}px"
+        title="Gợi ý: ${it.item_id} — ${it.size_cm?.w}×${it.size_cm?.h}×${it.size_cm?.d} cm · x=${xOff}cm">
+        <span class="suggested-icon">📦</span>
+        <span class="suggested-label">${it.item_id.slice(-4)}</span>
+      </div>`;
+    }
+
+    const pct = Math.round(((lv.used_cm||0) / (lv.capacity_cm||1)) * 100);
+    const warn = lv.expected_count !== lv.detected_count;
+    const isTop = idx === 0;
+    return `<div class="shelf-level-row">
+      <div class="shelf-level-label">
+        <span style="font-weight:600;color:${suggForLevel.length?'#ef4444':'var(--text2)'}">T${lv.level_num}</span>
+        ${isTop ? `<span style="font-size:7px;color:var(--accent);font-weight:600">TRÊN</span>` : ''}
+        <span style="font-size:8px">${pct}%</span>
+        ${warn?`<span style="color:var(--warn);font-size:8px">⚠</span>`:''}
+      </div>
+      <div class="shelf-level-content" style="height:${levelH}px">
+        ${itemBoxes}
+        <div class="shelf-floor"></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  return `
+    <div class="shelf-3d">
+      <div class="shelf-3d-header">
+        <span>← ${capacityCm} cm →</span>
+        <span>${levels.length} tầng · T${levels[0]?.level_num||1} (trên cùng) → T${levels[levels.length-1]?.level_num||4} (thấp nhất)</span>
+      </div>
+      <div style="overflow-x:auto">
+        ${levelsHtml}
       </div>
     </div>
-    <div class="shelf-grid">${shelfHtml}</div>
+    <div class="shelf-legend">
+      <div class="legend-item">
+        <div class="legend-box" style="background:rgba(0,212,170,.22);border:1.5px solid #00d4aa"></div>
+        <span>Vật đã đặt (click để xem chi tiết)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-dashed"></div>
+        <span>Vị trí gợi ý (chờ xếp kệ)</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-box" style="background:var(--bg4);border:1px solid var(--border)"></div>
+        <span>Khoảng trống</span>
+      </div>
+    </div>
+    ${waitingItems.length > 0 ? `
+    <div style="margin-top:14px;padding:12px 14px;background:rgba(239,68,68,.07);border:1px solid rgba(239,68,68,.25);border-radius:var(--radius)">
+      <div style="font-size:11px;font-weight:600;color:#ef4444;margin-bottom:8px">📦 Vật đang chờ xếp vào kệ này (${waitingItems.length})</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
+        ${waitingItems.map(it => `
+          <div style="background:var(--bg3);border:1px solid rgba(239,68,68,.3);border-radius:4px;padding:5px 10px;font-size:10px;font-family:var(--mono)">
+            <span style="color:#ef4444">${it.item_id}</span>
+            <span style="color:var(--text3)"> · ${it.size_cm?.w}×${it.size_cm?.h}×${it.size_cm?.d}cm</span>
+            <span style="color:var(--text3)"> · ${it.suggested_position?.level_id||'?'} x=${it.suggested_position?.x_offset_cm||0}cm</span>
+          </div>
+        `).join('')}
+      </div>
+    </div>` : ''}
   `;
 }
 
@@ -618,7 +1257,10 @@ function renderItems() {
   const search = document.getElementById('sq') ? document.getElementById('sq').value.toLowerCase() : '';
 
   let items = allItems;
-  if (statusFilter) items = items.filter(i => i.status === statusFilter);
+  if (statusFilter) {
+    if (statusFilter === 'outbound_pending') items = items.filter(i => Boolean(getPendingRemoveRequestForItem(i.item_id)) || i.outbound_status === 'pending');
+    else items = items.filter(i => i.status === statusFilter);
+  }
   if (search) items = items.filter(i =>
     i.item_id.toLowerCase().includes(search) ||
     (i.placed_position?.shelf_id||'').toLowerCase().includes(search) ||
@@ -627,16 +1269,14 @@ function renderItems() {
 
   const rows = items.map(it => {
     const pos = it.placed_position || it.suggested_position;
-    const statusLabel = {
-      placed:'placed', removed:'removed',
-      waiting_for_placement:'waiting',
-      missing_suspected:'missing', unknown_object:'unknown'
-    }[it.status] || 'unknown';
+    const pendingReq = getPendingRemoveRequestForItem(it.item_id);
+    const effectiveStatus = pendingReq ? 'outbound_pending' : (it.ui_status || it.display_status || it.status);
+    const statusLabel = statusBadgeClass(effectiveStatus);
     return `<tr>
       <td><span class="mono" style="cursor:pointer;color:var(--accent2)" onclick="openDetail('${it.item_id}')">${it.item_id}</span></td>
       <td><span class="mono" style="font-size:10px">${it.qr_data}</span></td>
       <td><span class="mono">${it.size_cm?.w}×${it.size_cm?.h}×${it.size_cm?.d} cm</span></td>
-      <td><span class="badge ${statusLabel}">${it.status}</span></td>
+      <td><span class="badge ${statusLabel}">${effectiveStatus}</span></td>
       <td><span class="mono">${pos?.shelf_id||'—'}</span></td>
       <td><span class="mono">${pos?.level_id||'—'}</span></td>
       <td><span class="mono" style="font-size:10px">${pos?.x_offset_cm!=null?pos.x_offset_cm+'cm':'—'}</span></td>
@@ -644,7 +1284,8 @@ function renderItems() {
       <td>
         <div style="display:flex;gap:4px">
           <button class="btn btn-ghost btn-sm" onclick="openDetail('${it.item_id}')">Detail</button>
-          ${it.status==='placed'?`<button class="btn btn-danger btn-sm" onclick="removeItem('${it.item_id}')">Xuất</button>`:''}
+          ${it.status==='placed'?`<button class="btn btn-ghost btn-sm" onclick="downloadItemQr('${it.item_id}')">Tải QR</button>`:''}
+          ${it.status==='placed' ? (pendingReq ? `<span class="badge warning">chờ Jetson</span>` : `<button class="btn btn-danger btn-sm" onclick="removeItem('${it.item_id}')">Xuất</button>`) : ''}
         </div>
       </td>
     </tr>`;
@@ -656,6 +1297,7 @@ function renderItems() {
       <select id="sf" onchange="renderItems()">
         <option value="">Tất cả trạng thái</option>
         <option value="placed">placed</option>
+        <option value="outbound_pending">outbound_pending</option>
         <option value="waiting_for_placement">waiting_for_placement</option>
         <option value="removed">removed</option>
         <option value="missing_suspected">missing_suspected</option>
@@ -763,10 +1405,14 @@ async function renderDetail(itemId) {
     const { item, events } = await r.json();
 
     const pos = item.placed_position || item.suggested_position;
-    const statusLabel = { placed:'placed', removed:'removed', waiting_for_placement:'waiting', missing_suspected:'missing', unknown_object:'unknown' }[item.status] || 'unknown';
+    upsertItem(item);
+    const pendingReq = getPendingRemoveRequestForItem(item.item_id);
+    const effectiveStatus = pendingReq ? 'outbound_pending' : (item.ui_status || item.display_status || item.status);
+    const statusLabel = statusBadgeClass(effectiveStatus);
 
-    // Draw a simple QR-like pattern
-    const qrPat = genQRPattern(item.item_id);
+    const qrVisual = item.status === 'placed'
+      ? `<img src="${API}/api/items/${encodeURIComponent(item.item_id)}/qr.svg" alt="QR ${item.item_id}" style="width:120px;height:120px;background:white;border-radius:4px" onerror="this.replaceWith(document.createTextNode('QR chưa sẵn sàng'))"/>`
+      : genQRPattern(item.item_id);
 
     const evtHtml = events.length === 0 ? '<div style="padding:16px;color:var(--text3);font-size:12px">Không có events</div>'
       : events.map(e => {
@@ -784,15 +1430,17 @@ async function renderDetail(itemId) {
     c.innerHTML = `
       <div style="margin-bottom:16px;display:flex;gap:8px;align-items:center">
         <button class="btn btn-ghost btn-sm" onclick="nav('items')">← Quay lại</button>
-        <span class="badge ${statusLabel}">${item.status}</span>
-        ${item.status==='placed'?`<button class="btn btn-danger btn-sm" onclick="removeItem('${item.item_id}')">Xuất kho</button>`:''}
+        <span class="badge ${statusLabel}">${effectiveStatus}</span>
+        ${item.status==='placed'?`<button class="btn btn-ghost btn-sm" onclick="downloadItemQr('${item.item_id}')">Tải QR</button>`:''}
+        ${item.status==='placed' ? (pendingReq ? `<span class="badge warning">Đang chờ Jetson outbound</span>` : `<button class="btn btn-danger btn-sm" onclick="removeItem('${item.item_id}')">Xuất kho</button>`) : ''}
       </div>
       <div class="detail-grid">
         <div>
           <div class="qr-box mb-16">
             <div style="font-size:11px;font-family:var(--mono);color:var(--text3);margin-bottom:8px">QR Code</div>
-            <div class="qr-visual">${qrPat}</div>
+            <div class="qr-visual">${qrVisual}</div>
             <div style="font-size:10px;font-family:var(--mono);color:var(--text2);text-align:center">${item.qr_data}</div>
+            <button class="btn btn-ghost btn-sm" onclick="downloadItemQr('${item.item_id}')">Tải mã QR</button>
             <div style="font-size:9px;color:var(--text3);font-family:var(--mono)">${item.qr_path}</div>
           </div>
           <div class="card-sm">
@@ -810,7 +1458,8 @@ async function renderDetail(itemId) {
             <div class="kv-list">
               <div class="kv"><span class="kv-k">Item ID</span><span class="kv-v mono">${item.item_id}</span></div>
               <div class="kv"><span class="kv-k">QR Data</span><span class="kv-v mono">${item.qr_data}</span></div>
-              <div class="kv"><span class="kv-k">Status</span><span class="kv-v"><span class="badge ${statusLabel}">${item.status}</span></span></div>
+              <div class="kv"><span class="kv-k">Status</span><span class="kv-v"><span class="badge ${statusLabel}">${effectiveStatus}</span></span></div>
+              ${pendingReq ? `<div class="kv"><span class="kv-k">Outbound request</span><span class="kv-v mono">${pendingReq.request_id}<br/>status=${pendingReq.status}</span></div>` : ''}
               <div class="kv"><span class="kv-k">Suggested position</span><span class="kv-v mono">${item.suggested_position?`${item.suggested_position.shelf_id} · ${item.suggested_position.level_id} · x=${item.suggested_position.x_offset_cm}cm`:'—'}</span></div>
               <div class="kv"><span class="kv-k">Placed position</span><span class="kv-v mono">${item.placed_position?`${item.placed_position.shelf_id} · ${item.placed_position.level_id} · x=${item.placed_position.x_offset_cm}cm`:'—'}</span></div>
               <div class="kv"><span class="kv-k">Created at</span><span class="kv-v mono">${fmtDate(item.created_at)}</span></div>
@@ -827,14 +1476,319 @@ async function renderDetail(itemId) {
   } catch(e) { c.innerHTML = '<div class="empty-state">Lỗi tải dữ liệu</div>'; }
 }
 
+
+// ── Render: QR Search ───────────────────────────────────────────────────────
+function renderQrSearch() {
+  const placedCount = allItems.filter(i => i.status === 'placed').length;
+  const pendingCount = (allRemoveRequests || []).filter(r => r.status === 'pending').length;
+  document.getElementById('content').innerHTML = `
+    <div class="qr-search-grid">
+      <div class="card">
+        <div class="sec-title" style="margin-bottom:12px">Upload mã QR đã tải từ hệ thống</div>
+        <div class="qr-upload-box">
+          <input id="qr-file-input" class="qr-file-input" type="file" accept="image/*,.svg" onchange="handleQrFileUpload(event)"/>
+          <div id="qr-upload-preview" class="qr-preview">
+            ${renderQrUploadPreview()}
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="lookupQrItem()">Quét QR & tìm vị trí</button>
+          <button class="btn btn-danger" onclick="requestOutboundByQr()">Quét QR & gửi outbound</button>
+        </div>
+        <div class="qr-help" style="margin-top:14px">
+          Input chính là <b>file QR</b> tải từ dashboard, không nhập mã hàng thủ công.<br/>
+          Dashboard sẽ đọc nội dung QR, tìm item có trạng thái <b>placed</b>, sau đó có thể tạo remove_request pending để Jetson highlight vùng REMOVE.
+        </div>
+        <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
+          <span class="badge placed">${placedCount} placed</span>
+          <span class="badge warning">${pendingCount} pending outbound</span>
+          ${lastQrInput ? `<span class="badge ok">QR=${escapeHtml(lastQrInput)}</span>` : ''}
+        </div>
+      </div>
+      <div id="qr-result">
+        ${qrLookupResult ? renderQrResult(qrLookupResult) : '<div class="empty-state">Upload file QR để tìm vị trí hàng trên kệ.</div>'}
+      </div>
+    </div>
+  `;
+}
+
+function renderQrUploadPreview() {
+  if (!qrUploadedFile) {
+    return `<div class="qr-decoded empty">Chưa chọn file QR. Hãy dùng nút “Tải QR” ở item placed, sau đó upload file đó tại đây.</div>`;
+  }
+
+  const imgHtml = qrUploadedPreview
+    ? `<img src="${qrUploadedPreview}" alt="QR preview"/>`
+    : '';
+
+  return `${imgHtml}<div>
+    <div class="qr-decoded"><b>File:</b> ${escapeHtml(qrUploadedFile.name)}</div>
+    <div class="qr-decoded ${lastQrInput ? '' : 'empty'}" style="margin-top:6px"><b>QR value:</b> ${lastQrInput ? escapeHtml(lastQrInput) : 'chưa đọc được'}</div>
+  </div>`;
+}
+
+function renderQrResult(data) {
+  if (!data || !data.item) return '<div class="empty-state">Chưa có kết quả.</div>';
+  const item = data.item;
+  upsertItem(item);
+  if (data.request) upsertRemoveRequest(data.request);
+  const pos = data.position || item.placed_position || item.suggested_position || {};
+  const pending = data.request || data.pending_request || getPendingRemoveRequestForItem(item.item_id);
+  const effectiveStatus = pending ? 'outbound_pending' : (item.ui_status || item.display_status || item.status);
+  const statusLabel = statusBadgeClass(effectiveStatus);
+  return `
+    <div class="qr-result-card">
+      <div class="qr-result-title">Kết quả tìm hàng</div>
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap">
+        <span class="mono" style="color:var(--accent2);font-size:13px;cursor:pointer" onclick="openDetail('${item.item_id}')">${item.item_id}</span>
+        <span class="badge ${statusLabel}">${effectiveStatus}</span>
+        ${pending ? '<span class="badge warning">outbound pending</span>' : ''}
+      </div>
+      <div class="kv-list">
+        <div class="kv"><span class="kv-k">QR Data</span><span class="kv-v mono">${escapeHtml(qrValueForItem(item))}</span></div>
+        <div class="kv"><span class="kv-k">Kệ</span><span class="kv-v mono">${pos.shelf_id || '—'}</span></div>
+        <div class="kv"><span class="kv-k">Tầng</span><span class="kv-v mono">${pos.level_id || '—'}</span></div>
+        <div class="kv"><span class="kv-k">Offset</span><span class="kv-v mono">${pos.x_offset_cm ?? pos.start_cm ?? 0} cm</span></div>
+        <div class="kv"><span class="kv-k">Size</span><span class="kv-v mono">${item.size_cm?.w}×${item.size_cm?.h}×${item.size_cm?.d} cm</span></div>
+        ${pending ? `<div class="kv"><span class="kv-k">Request</span><span class="kv-v mono">${pending.request_id}<br/>status=${pending.status}</span></div>` : ''}
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px">
+        <button class="btn btn-ghost btn-sm" onclick="downloadItemQr('${item.item_id}')">Tải QR</button>
+        <button class="btn btn-ghost btn-sm" onclick="openDetail('${item.item_id}')">Chi tiết</button>
+        ${pos.shelf_id ? `<button class="btn btn-ghost btn-sm" onclick="openShelfModal('${pos.shelf_id}')">Mở mô phỏng kệ</button>` : ''}
+        ${pending ? '<span class="badge warning">Đã gửi yêu cầu. Chờ Jetson xác nhận.</span>' : `<button class="btn btn-danger btn-sm" onclick="requestOutboundByQr()">Gửi outbound cho Jetson</button>`}
+      </div>
+    </div>
+  `;
+}
+
+async function readFileAsText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = reject;
+    reader.readAsText(file);
+  });
+}
+
+async function readFileAsDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function cleanQrItemIdFromAnyText(value) {
+  let text = String(value || '').trim();
+  try { text = decodeURIComponent(text); } catch(e) {}
+
+  text = text.replace(/^[\'"]|[\'"]$/g, '').trim();
+  text = text.split(/[?#]/)[0].trim();
+  text = text.replace(/^.*[\\/]/, '');
+  text = text.replace(/\.(png|jpg|jpeg|svg|webp)$/i, '');
+
+  const match = text.match(/ITEM_[A-Z0-9_\-]+/i);
+  if (!match) return '';
+
+  return match[0]
+    .replace(/(?:[_-]QR(?:[_-]CODE)?|[_-]QRCODE)$/i, '')
+    .toUpperCase();
+}
+
+function extractQrLikeText(text, preferQrPrefix=false) {
+  const raw = String(text || '');
+  const itemId = cleanQrItemIdFromAnyText(raw);
+  if (!itemId) return '';
+
+  // If the text truly contains WH:... or this is a downloaded QR filename fallback,
+  // return the logical QR value used by the system, not the filename label.
+  return (/WH:/i.test(raw) || preferQrPrefix) ? `WH:${itemId}` : itemId;
+}
+
+async function decodeQrWithBarcodeDetector(file) {
+  if (!('BarcodeDetector' in window)) return '';
+
+  try {
+    const detector = new BarcodeDetector({ formats: ['qr_code'] });
+    const bitmap = await createImageBitmap(file);
+    const codes = await detector.detect(bitmap);
+    if (codes && codes.length > 0) return codes[0].rawValue || '';
+  } catch (e) {
+    return '';
+  }
+
+  return '';
+}
+
+async function decodeQrFromUploadedFile(file) {
+  if (!file) return '';
+
+  // 1) If it is SVG, recover embedded QR metadata/text.
+  if (file.type.includes('svg') || file.name.toLowerCase().endsWith('.svg')) {
+    try {
+      const txt = await readFileAsText(file);
+      const fromSvg = extractQrLikeText(txt, true);
+      if (fromSvg) return fromSvg;
+    } catch (e) {}
+  }
+
+  // 2) Real QR scan in browser when BarcodeDetector is available.
+  const scanned = await decodeQrWithBarcodeDetector(file);
+  if (scanned) return scanned;
+
+  // 3) Fallback for QR files downloaded from this dashboard: filename contains ITEM_xxx.
+  const fromName = extractQrLikeText(file.name, true);
+  if (fromName) return fromName;
+
+  return '';
+}
+
+async function handleQrFileUpload(evt) {
+  const file = evt?.target?.files?.[0] || null;
+  qrUploadedFile = file;
+  qrLookupResult = null;
+  lastQrInput = '';
+  qrUploadedPreview = '';
+
+  const preview = document.getElementById('qr-upload-preview');
+  if (!file) {
+    if (preview) preview.innerHTML = renderQrUploadPreview();
+    return;
+  }
+
+  try {
+    qrUploadedPreview = await readFileAsDataURL(file);
+  } catch(e) {
+    qrUploadedPreview = '';
+  }
+
+  if (preview) preview.innerHTML = renderQrUploadPreview();
+
+  const decoded = await decodeQrFromUploadedFile(file);
+  if (decoded) {
+    lastQrInput = decoded;
+    if (preview) preview.innerHTML = renderQrUploadPreview();
+    toast(`✓ Đã đọc QR: ${decoded}`, 'success');
+  } else {
+    if (preview) preview.innerHTML = renderQrUploadPreview();
+    toast('Chưa đọc được QR. Hãy dùng file QR tải từ dashboard hoặc dùng Chrome có BarcodeDetector.', 'warn');
+  }
+}
+
+async function getUploadedQrValueForAction() {
+  if (lastQrInput) return lastQrInput;
+  if (!qrUploadedFile) {
+    toast('Upload file QR trước đã', 'warn');
+    return '';
+  }
+
+  const decoded = await decodeQrFromUploadedFile(qrUploadedFile);
+  if (decoded) {
+    lastQrInput = decoded;
+    const preview = document.getElementById('qr-upload-preview');
+    if (preview) preview.innerHTML = renderQrUploadPreview();
+    return decoded;
+  }
+
+  toast('Không đọc được QR từ file upload', 'danger');
+  return '';
+}
+
+async function lookupQrItem() {
+  const qrValue = await getUploadedQrValueForAction();
+  if (!qrValue) return;
+
+  try {
+    const r = await fetch(`${API}/api/qr/lookup`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ qr_data: qrValue }),
+    });
+    const d = await r.json();
+    if (!r.ok) { qrLookupResult = null; document.getElementById('qr-result').innerHTML = `<div class="empty-state">${escapeHtml(d.error || 'Không tìm thấy item')}</div>`; return; }
+    qrLookupResult = d;
+    if (d.pending_request) upsertRemoveRequest(d.pending_request);
+    if (d.item) upsertItem(d.item);
+    document.getElementById('qr-result').innerHTML = renderQrResult(d);
+    toast(`✓ Tìm thấy ${d.item.item_id}`, 'success');
+  } catch(e) {
+    toast('Lỗi kết nối server', 'danger');
+  }
+}
+
+async function requestOutboundByQr() {
+  const qrValue = await getUploadedQrValueForAction();
+  if (!qrValue) return;
+
+  try {
+    const r = await fetch(`${API}/api/qr/outbound-request`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ qr_data: qrValue, note: 'QR upload outbound request' }),
+    });
+    const d = await r.json();
+    if (!r.ok) { toast(`Lỗi: ${d.error}`, 'danger'); return; }
+    qrLookupResult = d;
+    if (d.request) upsertRemoveRequest(d.request);
+    if (d.item) upsertItem(d.item);
+    await fetchRemoveRequests();
+    document.getElementById('qr-result').innerHTML = renderQrResult(d);
+    toast(`✓ Đã gửi outbound request cho ${d.item.item_id}. Chờ Jetson highlight.`, 'success');
+  } catch(e) {
+    toast('Lỗi kết nối server', 'danger');
+  }
+}
+
+async function downloadItemQr(itemId) {
+  let item = allItems.find(i => i.item_id === itemId);
+  if (!item) {
+    try {
+      const r = await fetch(`${API}/api/items/${encodeURIComponent(itemId)}`);
+      const d = await r.json();
+      item = d.item;
+    } catch(e) {}
+  }
+  if (!item) { toast('Không tìm thấy item để tải QR', 'danger'); return; }
+  if (item.status !== 'placed') { toast('Chỉ tải QR cho item đang placed', 'warn'); return; }
+
+  try {
+    const r = await fetch(`${API}/api/items/${encodeURIComponent(itemId)}/qr.png`);
+    if (!r.ok) {
+      let msg = 'Không tải được QR';
+      try { const e = await r.json(); msg = e.error || msg; } catch(_) {}
+      toast(msg, 'danger');
+      return;
+    }
+
+    const blob = await r.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${item.item_id}_QR.png`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    toast(`✓ Đã tải QR cho ${item.item_id}`, 'success');
+  } catch(e) {
+    toast('Không tải được QR từ backend', 'danger');
+  }
+}
+
 // ── Actions ─────────────────────────────────────────────────────────────────
 async function removeItem(itemId) {
   if (!confirm(`Xác nhận xuất kho item ${itemId}?`)) return;
   try {
     const r = await fetch(`${API}/api/items/${itemId}/remove-request`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ note: 'Dashboard export' }) });
     if (r.ok) {
-      toast(`✓ ${itemId} xuất kho thành công`, 'success');
+      const d = await r.json();
+      if (d.request) upsertRemoveRequest(d.request);
+      if (d.item) upsertItem(d.item);
+      toast(`✓ Đã gửi yêu cầu xuất kho ${itemId}. Chờ Jetson xác nhận.`, 'success');
       await fetchItems();
+      await fetchRemoveRequests();
       if (currentPage === 'items') renderItems();
       if (currentPage === 'detail') await renderDetail(itemId);
     } else {
@@ -882,6 +1836,7 @@ function toast(msg, type='info') {
 (async () => {
   await fetchOverview();
   await fetchAlerts();
+  await fetchRemoveRequests();
   renderOverview();
 })();
 </script>
