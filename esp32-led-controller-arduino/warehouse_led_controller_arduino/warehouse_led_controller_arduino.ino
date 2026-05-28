@@ -43,9 +43,13 @@ static const uint8_t LED_GPIO_T2 = 17;
 static const uint8_t LED_GPIO_T3 = 18;
 static const uint8_t LED_GPIO_T4 = 19;
 static const uint8_t LED_GPIOS[] = {LED_GPIO_T1, LED_GPIO_T2, LED_GPIO_T3, LED_GPIO_T4};
+static const uint8_t LED_COUNT = sizeof(LED_GPIOS) / sizeof(LED_GPIOS[0]);
+static const uint8_t ALL_LED_MASK = (uint8_t)((1U << LED_COUNT) - 1U);
 
 static const unsigned long DEFAULT_BLINK_MS = 500;
 static const unsigned long DEFAULT_TIMEOUT_MS = 120000;
+static const unsigned long ALERT_BLINK_MS = 75;
+static const unsigned long ALERT_TIMEOUT_MS = 300000;
 static const unsigned long WIFI_RETRY_MS = 500;
 static const unsigned long MQTT_RETRY_MS = 5000;
 static const size_t MQTT_PAYLOAD_BUFFER_SIZE = 1024;
@@ -57,7 +61,7 @@ char mqttHost[128] = "";
 uint16_t mqttPort = MQTT_PORT;
 unsigned long lastMqttAttemptMs = 0;
 
-int activeLevel = -1;
+uint8_t activeLedMask = 0;
 unsigned long blinkIntervalMs = DEFAULT_BLINK_MS;
 unsigned long blinkDeadlineMs = 0;
 unsigned long lastBlinkToggleMs = 0;
@@ -77,10 +81,16 @@ static bool timeReached(unsigned long now, unsigned long target) {
   return (long)(now - target) >= 0;
 }
 
-static void setAllLeds(bool on) {
-  for (uint8_t index = 0; index < 4; index++) {
+static void writeLedMask(uint8_t ledMask) {
+  ledMask &= ALL_LED_MASK;
+  for (uint8_t index = 0; index < LED_COUNT; index++) {
+    const bool on = (ledMask & (1U << index)) != 0;
     digitalWrite(LED_GPIOS[index], on ? HIGH : LOW);
   }
+}
+
+static void setAllLeds(bool on) {
+  writeLedMask(on ? ALL_LED_MASK : 0);
 }
 
 static int levelIndexFromId(const char *levelId) {
@@ -96,8 +106,33 @@ static int levelIndexFromId(const char *levelId) {
   return levelId[1] - '1';
 }
 
+static uint8_t ledMaskFromLevelIndex(int levelIndex) {
+  if (levelIndex < 0 || levelIndex >= LED_COUNT) {
+    return 0;
+  }
+  return (uint8_t)(1U << levelIndex);
+}
+
+static void printLedMask(uint8_t ledMask) {
+  bool printed = false;
+  for (uint8_t index = 0; index < LED_COUNT; index++) {
+    if ((ledMask & (1U << index)) == 0) {
+      continue;
+    }
+    if (printed) {
+      Serial.print(",");
+    }
+    Serial.print("T");
+    Serial.print(index + 1);
+    printed = true;
+  }
+  if (!printed) {
+    Serial.print("none");
+  }
+}
+
 static void ledClear(const char *reason) {
-  activeLevel = -1;
+  activeLedMask = 0;
   blinkPhaseOn = false;
   blinkDeadlineMs = 0;
   setAllLeds(false);
@@ -110,28 +145,32 @@ static void ledClear(const char *reason) {
   Serial.println();
 }
 
-static void ledStartBlink(int levelIndex, unsigned long blinkMs, unsigned long timeoutMs) {
-  if (levelIndex < 0 || levelIndex >= 4) {
-    Serial.print("Ignoring invalid level index: ");
-    Serial.println(levelIndex);
+static void ledStartSignal(
+  uint8_t ledMask,
+  unsigned long blinkMs,
+  unsigned long timeoutMs,
+  unsigned long minBlinkMs,
+  const char *label
+) {
+  ledMask &= ALL_LED_MASK;
+  if (ledMask == 0) {
+    Serial.println("Ignoring LED command with empty LED mask");
     return;
   }
 
-  blinkIntervalMs = clampUnsignedLong(blinkMs, 100, 5000);
+  blinkIntervalMs = clampUnsignedLong(blinkMs, minBlinkMs, 5000);
   timeoutMs = clampUnsignedLong(timeoutMs, 1000, 3600000);
 
-  activeLevel = levelIndex;
+  activeLedMask = ledMask;
   blinkDeadlineMs = millis() + timeoutMs;
   lastBlinkToggleMs = millis();
   blinkPhaseOn = true;
 
-  setAllLeds(false);
-  digitalWrite(LED_GPIOS[activeLevel], HIGH);
+  writeLedMask(activeLedMask);
 
-  Serial.print("Blinking T");
-  Serial.print(levelIndex + 1);
-  Serial.print(" on GPIO");
-  Serial.print(LED_GPIOS[levelIndex]);
+  Serial.print(label);
+  Serial.print(" ");
+  printLedMask(activeLedMask);
   Serial.print(" every ");
   Serial.print(blinkIntervalMs);
   Serial.print(" ms for ");
@@ -139,8 +178,34 @@ static void ledStartBlink(int levelIndex, unsigned long blinkMs, unsigned long t
   Serial.println(" ms");
 }
 
+static void ledStartBlink(int levelIndex, unsigned long blinkMs, unsigned long timeoutMs) {
+  if (levelIndex < 0 || levelIndex >= LED_COUNT) {
+    Serial.print("Ignoring invalid level index: ");
+    Serial.println(levelIndex);
+    return;
+  }
+
+  ledStartSignal(ledMaskFromLevelIndex(levelIndex), blinkMs, timeoutMs, 100, "Blinking");
+}
+
+static void ledStartMissingAlert(const char *levelId, unsigned long blinkMs, unsigned long timeoutMs) {
+  uint8_t ledMask = ALL_LED_MASK;
+
+  if (levelId != nullptr && levelId[0] != '\0') {
+    const int levelIndex = levelIndexFromId(levelId);
+    if (levelIndex < 0) {
+      Serial.print("Invalid alert level_id: ");
+      Serial.println(levelId);
+      return;
+    }
+    ledMask = ledMaskFromLevelIndex(levelIndex);
+  }
+
+  ledStartSignal(ledMask, blinkMs, timeoutMs, 40, "Missing item alert");
+}
+
 static void serviceLed() {
-  if (activeLevel < 0) {
+  if (activeLedMask == 0) {
     return;
   }
 
@@ -156,10 +221,7 @@ static void serviceLed() {
 
   lastBlinkToggleMs = now;
   blinkPhaseOn = !blinkPhaseOn;
-  setAllLeds(false);
-  if (blinkPhaseOn) {
-    digitalWrite(LED_GPIOS[activeLevel], HIGH);
-  }
+  writeLedMask(blinkPhaseOn ? activeLedMask : 0);
 }
 
 static bool parseMqttBroker() {
@@ -193,6 +255,35 @@ static bool parseMqttBroker() {
 
   broker.toCharArray(mqttHost, sizeof(mqttHost));
   return true;
+}
+
+static bool isMissingWarningStatus(const char *status) {
+  if (status == nullptr) {
+    return false;
+  }
+  return strcmp(status, "suspected_missing_or_merged") == 0 ||
+         strcmp(status, "missing_suspected") == 0 ||
+         strcmp(status, "MISSING?") == 0;
+}
+
+static bool isExplicitAlertCommand(const char *command) {
+  if (command == nullptr) {
+    return false;
+  }
+  return strcmp(command, "alert") == 0 ||
+         strcmp(command, "warning") == 0 ||
+         strcmp(command, "missing_alert") == 0;
+}
+
+static bool isMissingAlertMetadata(const char *alertType, const char *reason, const char *status) {
+  if (alertType != nullptr && strcmp(alertType, "missing_item") == 0) {
+    return true;
+  }
+  if (reason != nullptr &&
+      (strcmp(reason, "missing_item") == 0 || strcmp(reason, "inventory_count_warning") == 0)) {
+    return true;
+  }
+  return isMissingWarningStatus(status);
 }
 
 static void connectWiFi() {
@@ -264,14 +355,14 @@ static void handleLedPayload(const char *payload, unsigned int length) {
   }
 
   const char *command = doc["command"] | "";
-  if (command[0] == '\0') {
-    Serial.println("Missing command field");
-    return;
-  }
+  const char *eventType = doc["event_type"] | "";
 
   const char *shelfId = doc["shelf_id"] | "";
+  if (shelfId[0] == '\0') {
+    shelfId = doc["payload"]["shelf_id"] | "";
+  }
   if (shelfId[0] != '\0' && strcmp(shelfId, SHELF_ID) != 0) {
-    Serial.print("Ignoring command for shelf ");
+    Serial.print("Ignoring MQTT message for shelf ");
     Serial.println(shelfId);
     return;
   }
@@ -282,13 +373,66 @@ static void handleLedPayload(const char *payload, unsigned int length) {
     return;
   }
 
+  const char *levelId = doc["level_id"] | "";
+  if (levelId[0] == '\0') {
+    levelId = doc["payload"]["level_id"] | "";
+  }
+
+  const char *status = doc["status"] | "";
+  if (status[0] == '\0') {
+    status = doc["payload"]["status"] | "";
+  }
+
+  const char *alertType = doc["alert_type"] | "";
+  if (alertType[0] == '\0') {
+    alertType = doc["payload"]["alert_type"] | "";
+  }
+
+  const char *reason = doc["reason"] | "";
+  if (reason[0] == '\0') {
+    reason = doc["payload"]["reason"] | "";
+  }
+
+  long expectedCount = doc["expected_count"] | -1;
+  if (expectedCount < 0) {
+    expectedCount = doc["payload"]["expected_count"] | -1;
+  }
+
+  long detectedCount = doc["detected_count"] | -1;
+  if (detectedCount < 0) {
+    detectedCount = doc["payload"]["detected_count"] | -1;
+  }
+
+  const bool countLooksMissing = expectedCount >= 0 && detectedCount >= 0 && detectedCount < expectedCount;
+  const bool isInventoryWarning = strcmp(eventType, "inventory_count_warning") == 0;
+  const bool isInventoryStatus = strcmp(eventType, "inventory_status") == 0;
+  const bool isMissingEvent =
+    (isInventoryWarning && (countLooksMissing || isMissingWarningStatus(status))) ||
+    (isInventoryStatus && countLooksMissing);
+  const bool isMissingAlert =
+    isExplicitAlertCommand(command) ||
+    isMissingEvent ||
+    (strcmp(command, "blink") == 0 && isMissingAlertMetadata(alertType, reason, status));
+
+  if (isMissingAlert) {
+    const unsigned long blinkMs = doc["blink_ms"] | ALERT_BLINK_MS;
+    const unsigned long timeoutMs = doc["timeout_ms"] | ALERT_TIMEOUT_MS;
+    ledStartMissingAlert(levelId, blinkMs, timeoutMs);
+    return;
+  }
+
+  if (command[0] == '\0') {
+    Serial.print("Ignoring MQTT event without LED action: ");
+    Serial.println(eventType[0] != '\0' ? eventType : "(no event_type)");
+    return;
+  }
+
   if (strcmp(command, "blink") != 0) {
     Serial.print("Ignoring unknown command: ");
     Serial.println(command);
     return;
   }
 
-  const char *levelId = doc["level_id"] | "";
   const int levelIndex = levelIndexFromId(levelId);
   if (levelIndex < 0) {
     Serial.print("Invalid level_id: ");
@@ -326,7 +470,7 @@ void setup() {
   Serial.println();
   Serial.println("Warehouse LED Controller starting");
 
-  for (uint8_t index = 0; index < 4; index++) {
+  for (uint8_t index = 0; index < LED_COUNT; index++) {
     pinMode(LED_GPIOS[index], OUTPUT);
   }
   setAllLeds(false);
