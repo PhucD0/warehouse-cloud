@@ -44,6 +44,8 @@ const MQTT_LED_RETAIN = String(process.env.MQTT_LED_RETAIN || 'true').toLowerCas
 const MQTT_LED_QOS = Number(process.env.MQTT_LED_QOS || 1);
 const MQTT_LED_BLINK_MS = Number(process.env.MQTT_LED_BLINK_MS || 500);
 const MQTT_LED_TIMEOUT_MS = Number(process.env.MQTT_LED_TIMEOUT_MS || 120000);
+const MQTT_LED_ALERT_BLINK_MS = Number(process.env.MQTT_LED_ALERT_BLINK_MS || 75);
+const MQTT_LED_ALERT_TIMEOUT_MS = Number(process.env.MQTT_LED_ALERT_TIMEOUT_MS || 300000);
 
 // v4 MQTT event ingest: Jetson publishes warehouse metadata/events to broker,
 // Cloud Backend subscribes and processes them exactly like POST /api/events.
@@ -58,9 +60,9 @@ const MQTT_COMMAND_TOPIC = process.env.MQTT_COMMAND_TOPIC || `${MQTT_TOPIC_PREFI
 const MQTT_COMMAND_QOS = Number(process.env.MQTT_COMMAND_QOS || 1);
 const MQTT_COMMAND_RETAIN = String(process.env.MQTT_COMMAND_RETAIN || 'false').toLowerCase() === 'true';
 
-// In v4, Jetson is the main LED controller. Keep cloud LED bridge OFF by default
-// to avoid duplicate blink/clear commands. Set true only if you want cloud fallback.
-const MQTT_LED_BRIDGE_ENABLED = String(process.env.MQTT_LED_BRIDGE_ENABLED || 'false').toLowerCase() === 'true';
+// Keep the ESP32 LED command bridge on by default. Set false only if another
+// controller is already publishing the LED commands directly.
+const MQTT_LED_BRIDGE_ENABLED = String(process.env.MQTT_LED_BRIDGE_ENABLED || 'true').toLowerCase() === 'true';
 
 
 let mongoEnabled = false;
@@ -462,6 +464,39 @@ function publishPlacementClear(itemId, position, reason = 'item_placed') {
     shelf_id: pos?.shelf_id || DEFAULT_SHELF_ID,
     item_id: itemId || null,
     reason,
+    source: 'warehouse-cloud',
+  });
+}
+
+function publishMissingInventoryAlert(evt, payload = {}) {
+  const expectedCount = Number(payload.expected_count ?? evt.expected_count ?? -1);
+  const detectedCount = Number(payload.detected_count ?? evt.detected_count ?? -1);
+  const status = String(payload.status || evt.status || '');
+  const countLooksMissing =
+    Number.isFinite(expectedCount) &&
+    Number.isFinite(detectedCount) &&
+    expectedCount >= 0 &&
+    detectedCount >= 0 &&
+    detectedCount < expectedCount;
+  const statusLooksMissing =
+    status === 'suspected_missing_or_merged' ||
+    status === 'missing_suspected' ||
+    status === 'MISSING?';
+
+  if (!countLooksMissing && !statusLooksMissing) return;
+
+  publishLedCommand({
+    command: 'alert',
+    alert_type: 'missing_item',
+    event_type: 'inventory_count_warning',
+    shelf_id: normalizeShelfId(evt.shelf_id || payload.shelf_id || DEFAULT_SHELF_ID),
+    level_id: normalizeLevelId(evt.level_id || payload.level_id),
+    expected_count: expectedCount >= 0 ? expectedCount : null,
+    detected_count: detectedCount >= 0 ? detectedCount : null,
+    status,
+    blink_ms: MQTT_LED_ALERT_BLINK_MS,
+    timeout_ms: MQTT_LED_ALERT_TIMEOUT_MS,
+    reason: 'missing_item',
     source: 'warehouse-cloud',
   });
 }
@@ -1006,6 +1041,7 @@ async function handleWarehouseEvent(rawBody = {}, options = {}) {
     db.alerts = db.alerts.filter(a => !(a.shelf_id === shelf_id && a.level_id === level_id));
     db.alerts.unshift({ ...evt, updated_at: evt.timestamp });
     if (db.alerts.length > 100) db.alerts = db.alerts.slice(0, 100);
+    publishMissingInventoryAlert(evt, payload);
   }
 
   if (evt.event_type === 'inventory_level_status') {
