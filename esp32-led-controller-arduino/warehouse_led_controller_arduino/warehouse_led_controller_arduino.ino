@@ -34,8 +34,25 @@
 #define MQTT_USE_INSECURE_TLS 1
 #endif
 
+#ifndef LED_ACTIVE_HIGH
+#define LED_ACTIVE_HIGH 1
+#endif
+
+#ifndef LED_BOOT_TEST
+#define LED_BOOT_TEST 1
+#endif
+
+#ifndef MQTT_LED_COMMAND_TOPIC
+#define MQTT_LED_COMMAND_TOPIC "warehouse/SHELF_A/led/command"
+#endif
+
+#ifndef MQTT_JETSON_EVENT_TOPIC
+#define MQTT_JETSON_EVENT_TOPIC "warehouse/jetson/events"
+#endif
+
 static const char SHELF_ID[] = "SHELF_A";
-static const char MQTT_TOPIC[] = "warehouse/SHELF_A/led/command";
+static const char LED_COMMAND_TOPIC[] = MQTT_LED_COMMAND_TOPIC;
+static const char JETSON_EVENT_TOPIC[] = MQTT_JETSON_EVENT_TOPIC;
 static const char MQTT_CLIENT_ID_PREFIX[] = "warehouse-led-esp32-";
 
 static const uint8_t LED_GPIO_T1 = 16;
@@ -85,12 +102,29 @@ static void writeLedMask(uint8_t ledMask) {
   ledMask &= ALL_LED_MASK;
   for (uint8_t index = 0; index < LED_COUNT; index++) {
     const bool on = (ledMask & (1U << index)) != 0;
-    digitalWrite(LED_GPIOS[index], on ? HIGH : LOW);
+    const int level = on ? (LED_ACTIVE_HIGH ? HIGH : LOW) : (LED_ACTIVE_HIGH ? LOW : HIGH);
+    digitalWrite(LED_GPIOS[index], level);
   }
 }
 
 static void setAllLeds(bool on) {
   writeLedMask(on ? ALL_LED_MASK : 0);
+}
+
+static void ledBootSelfTest() {
+#if LED_BOOT_TEST
+  Serial.println("LED boot test");
+  setAllLeds(true);
+  delay(350);
+  setAllLeds(false);
+  delay(120);
+
+  for (uint8_t index = 0; index < LED_COUNT; index++) {
+    writeLedMask((uint8_t)(1U << index));
+    delay(120);
+  }
+  setAllLeds(false);
+#endif
 }
 
 static int levelIndexFromId(const char *levelId) {
@@ -257,6 +291,13 @@ static bool parseMqttBroker() {
   return true;
 }
 
+static const char *firstNonEmpty(const char *current, const char *fallback) {
+  if (current != nullptr && current[0] != '\0') {
+    return current;
+  }
+  return fallback != nullptr ? fallback : "";
+}
+
 static bool isMissingWarningStatus(const char *status) {
   if (status == nullptr) {
     return false;
@@ -305,13 +346,20 @@ static void connectWiFi() {
   Serial.println(WiFi.localIP());
 }
 
-static void subscribeLedTopic() {
-  if (mqttClient.subscribe(MQTT_TOPIC, 1)) {
+static void subscribeTopic(const char *topic) {
+  if (mqttClient.subscribe(topic, 1)) {
     Serial.print("Subscribed to ");
-    Serial.println(MQTT_TOPIC);
+    Serial.println(topic);
   } else {
     Serial.print("Failed to subscribe to ");
-    Serial.println(MQTT_TOPIC);
+    Serial.println(topic);
+  }
+}
+
+static void subscribeMqttTopics() {
+  subscribeTopic(LED_COMMAND_TOPIC);
+  if (strcmp(JETSON_EVENT_TOPIC, LED_COMMAND_TOPIC) != 0) {
+    subscribeTopic(JETSON_EVENT_TOPIC);
   }
 }
 
@@ -338,7 +386,7 @@ static void connectMqtt() {
 
   if (mqttClient.connect(clientId.c_str(), MQTT_USERNAME, MQTT_PASSWORD)) {
     Serial.println("MQTT connected");
-    subscribeLedTopic();
+    subscribeMqttTopics();
   } else {
     Serial.print("MQTT connect failed, state=");
     Serial.println(mqttClient.state());
@@ -358,9 +406,15 @@ static void handleLedPayload(const char *payload, unsigned int length) {
   const char *eventType = doc["event_type"] | "";
 
   const char *shelfId = doc["shelf_id"] | "";
-  if (shelfId[0] == '\0') {
-    shelfId = doc["payload"]["shelf_id"] | "";
-  }
+  shelfId = firstNonEmpty(shelfId, doc["payload"]["shelf_id"] | "");
+  shelfId = firstNonEmpty(shelfId, doc["payload"]["suggested_position"]["shelf_id"] | "");
+  shelfId = firstNonEmpty(shelfId, doc["suggested_position"]["shelf_id"] | "");
+  shelfId = firstNonEmpty(shelfId, doc["payload"]["actual_position"]["shelf_id"] | "");
+  shelfId = firstNonEmpty(shelfId, doc["actual_position"]["shelf_id"] | "");
+  shelfId = firstNonEmpty(shelfId, doc["payload"]["position"]["shelf_id"] | "");
+  shelfId = firstNonEmpty(shelfId, doc["position"]["shelf_id"] | "");
+  shelfId = firstNonEmpty(shelfId, doc["payload"]["removed_position"]["shelf_id"] | "");
+  shelfId = firstNonEmpty(shelfId, doc["removed_position"]["shelf_id"] | "");
   if (shelfId[0] != '\0' && strcmp(shelfId, SHELF_ID) != 0) {
     Serial.print("Ignoring MQTT message for shelf ");
     Serial.println(shelfId);
@@ -374,24 +428,24 @@ static void handleLedPayload(const char *payload, unsigned int length) {
   }
 
   const char *levelId = doc["level_id"] | "";
-  if (levelId[0] == '\0') {
-    levelId = doc["payload"]["level_id"] | "";
-  }
+  levelId = firstNonEmpty(levelId, doc["payload"]["level_id"] | "");
+  levelId = firstNonEmpty(levelId, doc["payload"]["suggested_position"]["level_id"] | "");
+  levelId = firstNonEmpty(levelId, doc["suggested_position"]["level_id"] | "");
+  levelId = firstNonEmpty(levelId, doc["payload"]["actual_position"]["level_id"] | "");
+  levelId = firstNonEmpty(levelId, doc["actual_position"]["level_id"] | "");
+  levelId = firstNonEmpty(levelId, doc["payload"]["position"]["level_id"] | "");
+  levelId = firstNonEmpty(levelId, doc["position"]["level_id"] | "");
+  levelId = firstNonEmpty(levelId, doc["payload"]["removed_position"]["level_id"] | "");
+  levelId = firstNonEmpty(levelId, doc["removed_position"]["level_id"] | "");
 
   const char *status = doc["status"] | "";
-  if (status[0] == '\0') {
-    status = doc["payload"]["status"] | "";
-  }
+  status = firstNonEmpty(status, doc["payload"]["status"] | "");
 
   const char *alertType = doc["alert_type"] | "";
-  if (alertType[0] == '\0') {
-    alertType = doc["payload"]["alert_type"] | "";
-  }
+  alertType = firstNonEmpty(alertType, doc["payload"]["alert_type"] | "");
 
   const char *reason = doc["reason"] | "";
-  if (reason[0] == '\0') {
-    reason = doc["payload"]["reason"] | "";
-  }
+  reason = firstNonEmpty(reason, doc["payload"]["reason"] | "");
 
   long expectedCount = doc["expected_count"] | -1;
   if (expectedCount < 0) {
@@ -405,7 +459,10 @@ static void handleLedPayload(const char *payload, unsigned int length) {
 
   const bool countLooksMissing = expectedCount >= 0 && detectedCount >= 0 && detectedCount < expectedCount;
   const bool isInventoryWarning = strcmp(eventType, "inventory_count_warning") == 0;
-  const bool isInventoryStatus = strcmp(eventType, "inventory_status") == 0;
+  const bool isInventoryStatus =
+    strcmp(eventType, "inventory_status") == 0 ||
+    strcmp(eventType, "inventory_status_update") == 0 ||
+    strcmp(eventType, "inventory_level_status") == 0;
   const bool isMissingEvent =
     (isInventoryWarning && (countLooksMissing || isMissingWarningStatus(status))) ||
     (isInventoryStatus && countLooksMissing);
@@ -418,6 +475,25 @@ static void handleLedPayload(const char *payload, unsigned int length) {
     const unsigned long blinkMs = doc["blink_ms"] | ALERT_BLINK_MS;
     const unsigned long timeoutMs = doc["timeout_ms"] | ALERT_TIMEOUT_MS;
     ledStartMissingAlert(levelId, blinkMs, timeoutMs);
+    return;
+  }
+
+  if (strcmp(eventType, "item_created") == 0) {
+    const int levelIndex = levelIndexFromId(levelId);
+    if (levelIndex < 0) {
+      Serial.print("Item-created event missing valid level_id: ");
+      Serial.println(levelId);
+      return;
+    }
+
+    const unsigned long blinkMs = doc["blink_ms"] | DEFAULT_BLINK_MS;
+    const unsigned long timeoutMs = doc["timeout_ms"] | DEFAULT_TIMEOUT_MS;
+    ledStartBlink(levelIndex, blinkMs, timeoutMs);
+    return;
+  }
+
+  if (strcmp(eventType, "item_placed") == 0) {
+    ledClear("item_placed_event");
     return;
   }
 
@@ -474,6 +550,7 @@ void setup() {
     pinMode(LED_GPIOS[index], OUTPUT);
   }
   setAllLeds(false);
+  ledBootSelfTest();
 
   if (!parseMqttBroker()) {
     Serial.println("Invalid MQTT_BROKER. Expected mqtts://host:8883");

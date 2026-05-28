@@ -60,9 +60,9 @@ const MQTT_COMMAND_TOPIC = process.env.MQTT_COMMAND_TOPIC || `${MQTT_TOPIC_PREFI
 const MQTT_COMMAND_QOS = Number(process.env.MQTT_COMMAND_QOS || 1);
 const MQTT_COMMAND_RETAIN = String(process.env.MQTT_COMMAND_RETAIN || 'false').toLowerCase() === 'true';
 
-// In v4, Jetson is the main LED controller. Keep cloud LED bridge OFF by default
-// to avoid duplicate blink/clear commands. Set true only if you want cloud fallback.
-const MQTT_LED_BRIDGE_ENABLED = String(process.env.MQTT_LED_BRIDGE_ENABLED || 'false').toLowerCase() === 'true';
+// Keep the ESP32 LED command bridge on by default. Set false only if another
+// controller is already publishing the LED commands directly.
+const MQTT_LED_BRIDGE_ENABLED = String(process.env.MQTT_LED_BRIDGE_ENABLED || 'true').toLowerCase() === 'true';
 
 
 let mongoEnabled = false;
